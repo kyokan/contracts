@@ -70,19 +70,13 @@ contract('ChannelManager :: createChannel()', function(accounts) {
   	    expect(sentBalance[1]).to.be.above(0) //pass
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('10')) //pass
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		  // await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
-		
+ 
 		try {
-			await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
+			await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		}
-=======
-  	    await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: No Hub address was provided.", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -97,18 +91,13 @@ contract('ChannelManager :: createChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.createChannel(lc_id, partyI_fail, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.createChannel(lc_id, partyI_fail, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
+			await channelManager.createChannel(channel_id, partyI_fail, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.createChannel(channel_id, partyI_fail, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
+
 	  })
 	  it("3. Fail: Token balance input is negative.", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -122,18 +111,12 @@ contract('ChannelManager :: createChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('-10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
-		  
 		try {
-			await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
+			await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("4. Fail: Eth balance doesn't match paid value.", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -147,18 +130,12 @@ contract('ChannelManager :: createChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.not.be.equal(web3latest.utils.toWei('1')) //fail
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		  // await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: web3latest.utils.toWei('1')}).should.be.rejectedWith(SolRevert)
-		
 		try {
-			await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: web3latest.utils.toWei('1')})
+			await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: web3latest.utils.toWei('1')})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: web3latest.utils.toWei('1')}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("5. Fail: Token transferFrom failed.", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -172,18 +149,12 @@ contract('ChannelManager :: createChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.not.be.equal(web3latest.utils.toWei('1')) //fail
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		  // await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
-		  
 		try {
-			await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
+			await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("6. Success: Channel created!", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -197,12 +168,8 @@ contract('ChannelManager :: createChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		const tx = await lc.createChannel(lc_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
+		const tx = await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
 		expect(tx.logs[0].event).to.equal('DidLCOpen')
-=======
-  	    await channelManager.createChannel(channel_id, partyI, '0', token.address, sentBalance, {from:partyA, value: sentBalance[0]})
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	})
 })
@@ -243,18 +210,13 @@ contract('ChannelManager :: channelOpenTimeout()', function(accounts) {
   	    expect(channel[9]).to.be.equal(false) //pass
   	    expect(channel[7]*1000).to.be.below(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.LCOpenTimeout(lc_id, {from:partyB}).should.be.rejectedWith(SolRevert)
-		
+
 		try {
-			await lc.LCOpenTimeout(lc_id, {from:partyB})
+			await channelManager.channelOpenTimeout(channel_id, {from:partyB})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.channelOpenTimeout(channel_id, {from:partyB}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: Channel does not exist", async () => {
 	  	let channel_id = web3latest.utils.sha3('0000', {encoding: 'hex'})
@@ -264,18 +226,12 @@ contract('ChannelManager :: channelOpenTimeout()', function(accounts) {
   	    expect(channel[9]).to.be.equal(false) //pass
   	    expect(channel[7]*1000).to.be.below(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.LCOpenTimeout(lc_id, {from:partyA}).should.be.rejectedWith(SolRevert)
-		  
 		try {
-			await lc.LCOpenTimeout(lc_id, {from:partyA})
+			await channelManager.channelOpenTimeout(channel_id, {from:partyA})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.channelOpenTimeout(channel_id, {from:partyA}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("3. Fail: Channel is already open", async () => {
 	  	let channel_id = web3latest.utils.sha3('0000', {encoding: 'hex'})
@@ -286,19 +242,13 @@ contract('ChannelManager :: channelOpenTimeout()', function(accounts) {
   	    expect(channel[0][0]).to.not.be.equal(null) //pass
   	    expect(channel[9]).to.be.equal(true) //fail
   	    expect(channel[7]*1000).to.be.below(Date.now()) //pass
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.LCOpenTimeout(lc_id, {from:partyA}).should.be.rejectedWith(SolRevert)
-		  
+  
 		try {
-			await lc.LCOpenTimeout(lc_id, {from:partyA})
+			await channelManager.channelOpenTimeout(channel_id, {from:partyA})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.channelOpenTimeout(channel_id, {from:partyA}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("4. Fail: channelopenTimeout has not expired", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -307,19 +257,13 @@ contract('ChannelManager :: channelOpenTimeout()', function(accounts) {
   	    expect(channel[0][0]).to.not.be.equal(null) //pass
   	    expect(channel[9]).to.be.equal(false) //pass
   	    expect(channel[7]*1000).to.be.above(Date.now()) //fail
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.LCOpenTimeout(lc_id, {from:partyA}).should.be.rejectedWith(SolRevert)
-		  
+  
 		try {
-			await lc.LCOpenTimeout(lc_id, {from:partyA})
+			await channelManager.channelOpenTimeout(channel_id, {from:partyA})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.channelOpenTimeout(channel_id, {from:partyA}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })	 
 	  //******
 	  // NOTE: there's one more require in the contract for a failed token transfer. Unfortunately we can't recreate that here.
@@ -388,18 +332,12 @@ contract('ChannelManager :: joinChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		  // await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
-		
 		try {
-			await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]})
+			await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: Msg.sender is not PartyI of this channel", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -412,47 +350,30 @@ contract('ChannelManager :: joinChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.joinChannel(lc_id, sentBalance, {from: partyB, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
 		  try {
-			await lc.joinChannel(lc_id, sentBalance, {from: partyB, value: sentBalance[0]})
+			await channelManager.joinChannel(channel_id, sentBalance, {from: partyB, value: sentBalance[0]})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-
-=======
-  	    await channelManager.joinChannel(channel_id, sentBalance, {from: partyB, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("3. Fail: Token balance is negative", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
 		let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('-10')]
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		let approval = await token.approve(lc.address, sentBalance[1], {from: partyI})
-		let channel = await lc.getChannel(lc_id)
-=======
 		let approval = await token.approve(channelManager.address, sentBalance[1], {from: partyI})
-    	let channel = await channelManager.getChannel(channel_id)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
+		let channel = await channelManager.getChannel(channel_id)
   	    expect(channel[9]).to.be.equal(false) //pass
   	    expect(channel[0][1]).to.be.equal(partyI) //pass
   	    expect(sentBalance[1]).to.be.below(0) //fail
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('-10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		  // await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
-		  
-		  try {
-			await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]})
+		 try {
+			await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
-		  }
-=======
-  	    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
+		 }
 	  })
 	  it("4. Fail: Eth balance does not match paid value", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -465,19 +386,13 @@ contract('ChannelManager :: joinChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.not.be.equal(web3latest.utils.toWei('10')) //fail
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		  // await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: web3latest.utils.toWei('10')}).should.be.rejectedWith(SolRevert)
-		  try {
-			await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: web3latest.utils.toWei('10')})
+		try {
+			await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: web3latest.utils.toWei('10')})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
-		  }
+		}
 	})
-=======
-  	    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: web3latest.utils.toWei('10')}).should.be.rejectedWith(SolRevert)
-	  })
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  it("5. Fail: Token transferFrom failed", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
 		let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('1')]
@@ -489,18 +404,12 @@ contract('ChannelManager :: joinChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.not.be.equal(web3latest.utils.toWei('10')) //fail
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.joinChannel(lc_id, [sentBalance[0], web3latest.utils.toWei('10')], {from: partyI, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.joinChannel(lc_id, [sentBalance[0], web3latest.utils.toWei('10')], {from: partyI, value: sentBalance[0]})
+			await channelManager.joinChannel(channel_id, [sentBalance[0], web3latest.utils.toWei('10')], {from: partyI, value: sentBalance[0]})
 		} catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.joinChannel(channel_id, [sentBalance[0], web3latest.utils.toWei('10')], {from: partyI, value: sentBalance[0]}).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("6. Success: channel Joined!", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -513,15 +422,8 @@ contract('ChannelManager :: joinChannel()', function(accounts) {
   	    expect(sentBalance[0]).to.be.equal(web3latest.utils.toWei('10')) //pass
   	    expect(sentBalance[1]).to.be.equal(web3latest.utils.toWei('10')) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]})
-		  
-		const tx = await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]})
+		const tx = await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
 		expect(tx.logs[0].event).to.equal('DidLCJoin')
-=======
-  	    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
-
 	  })
 	})
 })
@@ -606,18 +508,12 @@ contract('ChannelManager :: consensusCloseChannel()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(sigI).to.be.equal(verificationI) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.consensusCloseChannel(lc_id, '1', balances, sigA, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.consensusCloseChannel(lc_id, '1', balances, sigA, sigI)
+			await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: Channel with that ID is not open", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -634,17 +530,12 @@ contract('ChannelManager :: consensusCloseChannel()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(sigI).to.be.equal(verificationI) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		  // await lc.consensusCloseChannel(lc_id, '1', balances, sigA, sigI).should.be.rejectedWith(SolRevert)
 		  try {
-			await lc.consensusCloseChannel(lc_id, '1', balances, sigA, sigI)
+			await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("3. Fail: Total Eth deposit is not equal to submitted Eth balances", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -662,18 +553,12 @@ contract('ChannelManager :: consensusCloseChannel()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(sigI).to.be.equal(verificationI) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.consensusCloseChannel(lc_id, '1', balances, sigA, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.consensusCloseChannel(lc_id, '1', balances, sigA, sigI)
+			await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("4. Fail: Total token deposit is not equal to submitted token balances", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -691,17 +576,12 @@ contract('ChannelManager :: consensusCloseChannel()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(sigI).to.be.equal(verificationI) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		  // await lc.consensusCloseChannel(lc_id, '1', balances, sigA, sigI).should.be.rejectedWith(SolRevert)
 		  try {
-			await lc.consensusCloseChannel(lc_id, '1', balances, sigA, sigI)
+			await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("5. Fail: Incorrect sig for partyA", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -719,17 +599,12 @@ contract('ChannelManager :: consensusCloseChannel()', function(accounts) {
   	    expect(fakeSig).to.not.be.equal(verificationA) //fail
   	    expect(sigI).to.be.equal(verificationI) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.consensusCloseChannel(lc_id, '1', balances, fakeSig, sigI).should.be.rejectedWith(SolRevert)
 		  try {
-			await lc.consensusCloseChannel(lc_id, '1', balances, fakeSig, sigI)
+			await channelManager.consensusCloseChannel(channel_id, '1', balances, fakeSig, sigI)
 		  } catch (e) {
 			  expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		}
-=======
-  	    await channelManager.consensusCloseChannel(channel_id, '1', balances, fakeSig, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("6. Fail: Incorrect sig for partyI", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -747,18 +622,13 @@ contract('ChannelManager :: consensusCloseChannel()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(fakeSig).to.not.be.equal(verificationI) //fail
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.consensusCloseChannel(lc_id, '1', balances, sigA, fakeSig).should.be.rejectedWith(SolRevert)
 		  
 		  try {
-			await lc.consensusCloseChannel(lc_id, '1', balances, sigA, fakeSig)
+			await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, fakeSig)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.consensusCloseChannel(channel_id, '1', balances, sigA, fakeSig).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("7. Success: Channel Closed", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -875,18 +745,12 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    expect(channel[4]).to.be.below(sequence) //pass
   	    if(channel[10] == true) expect(channel[8]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI)
+			await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: Channel with that ID is not open", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -908,18 +772,12 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    expect(channel[4]).to.be.below(sequence) //pass
   	    if(channel[10] == true) expect(channel[8]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI)
+			await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("3. Fail: Total Eth deposit is not equal to submitted Eth balances", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -941,18 +799,12 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    expect(channel[4]).to.be.below(sequence) //pass
   	    if(channel[10] == true) expect(channel[8]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI)
+			await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("4. Fail: Total token deposit is not equal to submitted Eth balances", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -974,18 +826,12 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    expect(channel[4]).to.be.below(sequence) //pass
   	    if(channel[10] == true) expect(channel[8]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI)
+			await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("5. Fail: Incorrect sig for partyA", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -1007,18 +853,12 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    expect(channel[4]).to.be.below(sequence) //pass
   	    if(channel[10] == true) expect(channel[8]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.updateLCstate(lc_id, updateParams, vcRootHash, fakeSig, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.updateLCstate(lc_id, updateParams, vcRootHash, fakeSig, sigI)
+			await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, fakeSig, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, fakeSig, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("6. Fail: Incorrect sig for partyI", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -1040,18 +880,12 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    expect(channel[4]).to.be.below(sequence) //pass
   	    if(channel[10] == true) expect(channel[8]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, fakeSig).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, fakeSig)
+			await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, fakeSig)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, fakeSig).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("7. Success 1: updateChannelState called first time and timeout started", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -1078,14 +912,8 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    channel = await channelManager.getChannel(channel_id)
   	    expect(channel[10]).to.be.equal(true)
 	  })
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-
 	  it("8. Error: State nonce below onchain latest sequence", async () => {
-	  	let lc_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
-=======
-	  it("8. Error: State none below onchain latest sequence", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  	let sequence = '1';
 	  	// let threadRootHash = web3latest.utils.soliditySha3({type: 'bytes32', value: '0x1'})
 		let updateParams = [sequence, '1', web3latest.utils.toWei('5'), web3latest.utils.toWei('15'), web3latest.utils.toWei('5'), web3latest.utils.toWei('15')]
@@ -1122,18 +950,12 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    expect(channel[4]).to.not.be.below(sequence) //fail
   	    if(channel[10] == true) expect(channel[8]*1000).to.not.be.above(Date.now()) //pass ==== Technically this is a fail right now, but sequence is checked earlier. Needs to be fixed later
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI)
+			await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("9. Error: Updatechannel timed out", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -1173,18 +995,12 @@ contract('ChannelManager :: updateChannelState()', function(accounts) {
   	    expect(channel[4]).to.be.below(sequence) //pass
   	    if(channel[10] == true) expect(channel[8]*1000).to.not.be.above(Date.now()) //fail
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.updateLCstate(lc_id, updateParams, vcRootHash, sigA, sigI)
+			await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.updateChannelState(channel_id, updateParams, threadRootHash, sigA, sigI).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("10. Success 2: new state submitted to updatechannel", async () => {
 	  	let channel_id = web3latest.utils.sha3('2222', {encoding: 'hex'})
@@ -1351,19 +1167,12 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(threadRootHash).to.be.equal(initialThreadState) //pass (this is a way of checking isContained() if there is only one thread open)
 
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
-		  
-		  try {
-			await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+		try {
+			await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: Channel with that ID is not open", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -1380,34 +1189,24 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
   	    expect(thread[4].toString()).to.be.equal('0') //pass
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(threadRootHash).to.be.equal(initialThreadState) //pass (this is a way of checking isContained() if there is only one thread open)
-
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+			await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 		  expect(e.name).to.equal('StatusError')
 	  	}
-=======
-  	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("TODO Fail: 3. Fail: thread with that ID is closed already", async () => {
 	  		//Sometimes reverts on initial close, unclear why. :(
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		let lc_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
+		let channel_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
 		let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('10')]
-		await token.approve(lc.address, sentBalance[1])
-		await token.approve(lc.address, sentBalance[1], {from: partyI})
-	    await lc.createChannel(lc_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
-	    await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]})
+		await token.approve(channelManager.address, sentBalance[1])
+		await token.approve(channelManager.address, sentBalance[1], {from: partyI})
+	    await channelManager.createChannel(channel_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
+	    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
 
-	    let vcRootHash_temp = web3latest.utils.soliditySha3(
-	      { type: 'uint256', value: lc_id }, // VC ID
+	    let threadRootHash_temp = web3latest.utils.soliditySha3(
+	      { type: 'uint256', value: channel_id }, // thread ID
 	      { type: 'uint256', value: 0 }, // sequence
 	      { type: 'address', value: partyA }, // partyA
 	      { type: 'address', value: partyB }, // partyB
@@ -1420,11 +1219,11 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
 	    )
 
 	    let payload_temp = web3latest.utils.soliditySha3(
-	      { type: 'uint256', value: lc_id },
+	      { type: 'uint256', value: channel_id },
 	      { type: 'bool', value: false }, // isclose
 	      { type: 'uint256', value: 1 }, // sequence
-	      { type: 'uint256', value: 1 }, // open VCs
-	      { type: 'bytes32', value: vcRootHash_temp }, // VC root hash
+	      { type: 'uint256', value: 1 }, // open threads
+	      { type: 'bytes32', value: threadRootHash_temp }, // Thread root hash
 	      { type: 'address', value: partyA }, // partyA
 	      { type: 'address', value: partyI }, // hub
 	      { type: 'uint256', value: web3latest.utils.toWei('5') },
@@ -1436,96 +1235,33 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
 	    sigA = await web3latest.eth.sign(payload_temp, partyA)
    	 	sigI = await web3latest.eth.sign(payload_temp, partyI)
    	 	let updateParams = [1, 1, web3latest.utils.toWei('5'), web3latest.utils.toWei('15'), web3latest.utils.toWei('5'), web3latest.utils.toWei('15')]
-    	await lc.updateLCstate(lc_id, updateParams, vcRootHash_temp, sigA, sigI)
+    	await channelManager.updateChannelState(channel_id, updateParams, threadRootHash_temp, sigA, sigI)
 
     	let balances = [web3latest.utils.toWei('1'), web3latest.utils.toWei('0'), web3latest.utils.toWei('1'), web3latest.utils.toWei('0')]
-	    sigA = await web3latest.eth.sign(vcRootHash_temp, partyA)
-	    await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+	    sigA = await web3latest.eth.sign(threadRootHash_temp, partyA)
+	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 
-	    await lc.closeVirtualChannel(lc_id, lc_id)
+	    await channelManager.closeThread(channel_id, channel_id)
 
-    	let channel = await lc.getChannel(lc_id)
-    	let vc = await lc.getVirtualChannel(lc_id)
-    	let verificationA = await web3latest.eth.sign(vcRootHash_temp, partyA)
-    	sigA = await web3latest.eth.sign(vcRootHash_temp, partyA)
+    	let channel = await channelManager.getChannel(channel_id)
+    	let thread = await channelManager.getThread(channel_id)
+    	let verificationA = await web3latest.eth.sign(threadRootHash_temp, partyA)
+    	sigA = await web3latest.eth.sign(threadRootHash_temp, partyA)
 
   	    expect(channel[0][0]).to.be.equal(partyA) //pass
   	    expect(channel[9]).to.be.equal(true) //pass
-  	    expect(vc[0]).to.be.equal(true) //fail
+  	    expect(thread[0]).to.be.equal(true) //fail
   	    expect(channel[8]*1000).to.be.below(Date.now()) //pass
-  	    expect(vc[4].toString()).to.not.be.equal('0') //pass (inverted because vc was already closed)
+  	    expect(thread[4].toString()).to.not.be.equal('0') //pass (inverted because thread was already closed)
   	    expect(sigA).to.be.equal(verificationA) //pass
-  	    expect(vcRootHash_temp).to.be.equal(vcRootHash_temp) //pass (this is a way of checking isContained() if there is only one VC open)
+  	    expect(threadRootHash_temp).to.be.equal(threadRootHash_temp) //pass (this is a way of checking isContained() if there is only one thread open)
 
-		//   await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
-		  
-		  try {
-			await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+		try {
+			await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
-		  }
-=======
-		// let channel_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
-		// let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('10')]
-		// await token.approve(channelManager.address, sentBalance[1])
-		// await token.approve(channelManager.address, sentBalance[1], {from: partyI})
-	 //    await channelManager.createChannel(channel_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
-	 //    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
-
-	 //    let threadRootHash_temp = web3latest.utils.soliditySha3(
-	 //      { type: 'uint256', value: channel_id }, // thread ID
-	 //      { type: 'uint256', value: 0 }, // sequence
-	 //      { type: 'address', value: partyA }, // partyA
-	 //      { type: 'address', value: partyB }, // partyB
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // bond eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // bond token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('0') }, // eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('0') }  // token
-	 //    )
-
-	 //    let payload_temp = web3latest.utils.soliditySha3(
-	 //      { type: 'uint256', value: channel_id },
-	 //      { type: 'bool', value: false }, // isclose
-	 //      { type: 'uint256', value: 1 }, // sequence
-	 //      { type: 'uint256', value: 1 }, // open threads
-	 //      { type: 'bytes32', value: threadRootHash_temp }, // thread root hash
-	 //      { type: 'address', value: partyA }, // partyA
-	 //      { type: 'address', value: partyI }, // hub
-	 //      { type: 'uint256', value: web3latest.utils.toWei('5') },
-	 //      { type: 'uint256', value: web3latest.utils.toWei('15') },
-	 //      { type: 'uint256', value: web3latest.utils.toWei('5') }, // token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('15') }  // token
-	 //    )
-
-	 //    sigA = await web3latest.eth.sign(payload_temp, partyA)
-  //  	 	sigI = await web3latest.eth.sign(payload_temp, partyI)
-  //  	 	let updateParams = [1, 1, web3latest.utils.toWei('5'), web3latest.utils.toWei('15'), web3latest.utils.toWei('5'), web3latest.utils.toWei('15')]
-  //   	await channelManager.updateChannelState(channel_id, updateParams, threadRootHash_temp, sigA, sigI)
-
-  //   	let balances = [web3latest.utils.toWei('1'), web3latest.utils.toWei('0'), web3latest.utils.toWei('1'), web3latest.utils.toWei('0')]
-	 //    sigA = await web3latest.eth.sign(threadRootHash_temp, partyA)
-	 //    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
-
-	 //    await channelManager.closeThread(channel_id, channel_id)
-
-  //   	let channel = await channelManager.getChannel(channel_id)
-  //   	let thread = await channelManager.getThread(channel_id)
-  //   	let verificationA = await web3latest.eth.sign(threadRootHash_temp, partyA)
-  //   	sigA = await web3latest.eth.sign(threadRootHash_temp, partyA)
-
-  // 	    expect(channel[0][0]).to.be.equal(partyA) //pass
-  // 	    expect(channel[9]).to.be.equal(true) //pass
-  // 	    expect(thread[0]).to.not.be.equal(true) //fail
-  // 	    expect(channel[8]*1000).to.not.be.below(Date.now()) //pass
-  // 	    expect(thread[4].toString()).to.not.be.equal('0') //pass (inverted because thread was already closed)
-  // 	    expect(sigA).to.be.equal(verificationA) //pass
-  // 	    expect(threadRootHash_temp).to.be.equal(threadRootHash_temp) //pass (this is a way of checking isContained() if there is only one thread open)
-
-  // 	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
+		 }
 	  })
 	  it("4. Fail: channel update timer has not yet expired", async () => {
 		let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('10')]
@@ -1582,18 +1318,12 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(threadRootHash_temp).to.be.equal(threadRootHash_temp) //pass (this is a way of checking isContained() if there is only one thread open)
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+			await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("5. Fail: Alice has not signed initial state (or wrong state)", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -1610,19 +1340,12 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
   	    expect(thread[4].toString()).to.be.equal('0') //pass
   	    expect(fakeSig).to.not.be.equal(verificationA) //fail
   	    expect(threadRootHash).to.be.equal(initialThreadState) //pass (this is a way of checking isContained() if there is only one thread open)
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, fakeSig).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, fakeSig)
+			await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, fakeSig)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, fakeSig).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("6. Fail: Old state not contained in root hash", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -1654,18 +1377,12 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(threadRootHash_temp).to.not.be.equal(initialThreadState) //fail (this is a way of checking isContained() if there is only one thread open)
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+			await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("7. Success: thread inited successfully", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -1683,12 +1400,8 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(threadRootHash).to.be.equal(initialThreadState) //pass (this is a way of checking isContained() if there is only one thread open)
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		const tx = await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
-		expect(tx.logs[0].event).to.equal('DidVCInit')
-=======
-  	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
+		const tx = await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
+		expect(tx.logs[0].event).to.equal('DidthreadInit')
 	  })
 	  it("8. Fail: Update thread timer is not 0 (initThreadState has already been called before)", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -1706,18 +1419,12 @@ contract('ChannelManager :: initThreadState()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    expect(threadRootHash).to.be.equal(initialThreadState) //pass (this is a way of checking isContained() if there is only one thread open)
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//   await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
-		  
 		  try {
-			await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+			await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-  	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	})
 })
@@ -1843,18 +1550,12 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: Channel with that ID is not open", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -1878,32 +1579,25 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("3. Fail: thread with that ID is already closed", async () => {
 	  	//Sometimes reverts on initial close, unclear why. :(
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		let lc_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
+		let channel_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
 		let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('10')]
-		await token.approve(lc.address, sentBalance[1])
-		await token.approve(lc.address, sentBalance[1], {from: partyI})
-	    await lc.createChannel(lc_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
-	    await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]})
+		await token.approve(channelManager.address, sentBalance[1])
+		await token.approve(channelManager.address, sentBalance[1], {from: partyI})
+	    await channelManager.createChannel(channel_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
+	    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
 
-	    initialVCstate = web3latest.utils.soliditySha3(
-	      { type: 'uint256', value: lc_id }, // VC ID
+	    initialThreadState = web3latest.utils.soliditySha3(
+	      { type: 'uint256', value: channel_id }, // thread ID
 	      { type: 'uint256', value: 0 }, // sequence
 	      { type: 'address', value: partyA }, // partyA
 	      { type: 'address', value: partyB }, // partyB
@@ -1916,11 +1610,11 @@ contract('ChannelManager :: settleThread()', function(accounts) {
 	    )
 
 	    let payload_temp = web3latest.utils.soliditySha3(
-	      { type: 'uint256', value: lc_id },
+	      { type: 'uint256', value: channel_id },
 	      { type: 'bool', value: false }, // isclose
 	      { type: 'uint256', value: 1 }, // sequence
-	      { type: 'uint256', value: 1 }, // open VCs
-	      { type: 'bytes32', value: initialVCstate }, // VC root hash
+	      { type: 'uint256', value: 1 }, // open threads
+	      { type: 'bytes32', value: initialThreadState }, // thread root hash
 	      { type: 'address', value: partyA }, // partyA
 	      { type: 'address', value: partyI }, // hub
 	      { type: 'uint256', value: web3latest.utils.toWei('5') },
@@ -1932,21 +1626,21 @@ contract('ChannelManager :: settleThread()', function(accounts) {
 	    sigA = await web3latest.eth.sign(payload_temp, partyA)
    	 	sigI = await web3latest.eth.sign(payload_temp, partyI)
    	 	let updateParams = [1, 1, web3latest.utils.toWei('5'), web3latest.utils.toWei('15'), web3latest.utils.toWei('5'), web3latest.utils.toWei('15')]
-    	await lc.updateLCstate(lc_id, updateParams, initialVCstate, sigA, sigI)
+    	await channelManager.updateChannelState(channel_id, updateParams, initialThreadtate, sigA, sigI)
 
     	let balances = [web3latest.utils.toWei('1'), web3latest.utils.toWei('0'), web3latest.utils.toWei('1'), web3latest.utils.toWei('0')]
-	    sigA = await web3latest.eth.sign(initialVCstate, partyA)
-	    await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+	    sigA = await web3latest.eth.sign(initialThreadState, partyA)
+	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 
-	    await lc.closeVirtualChannel(lc_id, lc_id)
+	    await channelManager.closeThread(channel_id, channel_id)
 
-    	let channel = await lc.getChannel(lc_id)
-    	let vc = await lc.getVirtualChannel(lc_id)
+    	let channel = await channelManager.getChannel(channel_id)
+    	let thread = await channelManager.getThread(channel_id)
 
     	balances = [web3latest.utils.toWei('0'), web3latest.utils.toWei('1'), web3latest.utils.toWei('0'), web3latest.utils.toWei('1')]
 
     	payload_temp = web3latest.utils.soliditySha3(
-	      { type: 'uint256', value: lc_id }, // VC ID
+	      { type: 'uint256', value: channel_id }, // thread ID
 	      { type: 'uint256', value: 2 }, // sequence
 	      { type: 'address', value: partyA }, // partyA
 	      { type: 'address', value: partyB }, // partyB
@@ -1962,106 +1656,25 @@ contract('ChannelManager :: settleThread()', function(accounts) {
 
   	    expect(channel[0][0]).to.be.equal(partyA) //pass
   	    expect(channel[9]).to.be.equal(true) //pass
-  	    expect(vc[0]).to.be.equal(true) //fail
-  	    expect(vc[2]).to.be.below(2) //pass
-  	    expect(vc[8][1].toString()).to.be.below(balances[1]) //pass
-  	    expect(vc[9][1].toString()).to.be.below(balances[3]) //pass
-  	    expect(vc[10][0].toString()).to.be.equal(web3latest.utils.toWei('1')) //pass 
-  	    expect(vc[10][1].toString()).to.be.equal(web3latest.utils.toWei('1')) //pass
-  	    expect(vc[4].toString()).to.not.be.equal('0') //pass
+  	    expect(thread[0]).to.be.equal(true) //fail
+  	    expect(thread[2]).to.be.below(2) //pass
+  	    expect(thread[8][1].toString()).to.be.below(balances[1]) //pass
+  	    expect(thread[9][1].toString()).to.be.below(balances[3]) //pass
+  	    expect(thread[10][0].toString()).to.be.equal(web3latest.utils.toWei('1')) //pass 
+  	    expect(thread[10][1].toString()).to.be.equal(web3latest.utils.toWei('1')) //pass
+  	    expect(thread[4].toString()).to.not.be.equal('0') //pass
   	    expect(channel[8]*1000).to.be.below(Date.now()) //pass
   	    expect(sigA).to.be.equal(verificationA) //pass
-  	    // expect(vc[4]*1000).to.be.above(Date.now()) //pass
+  	    // expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-		//  await lc.settleVC(lc_id, lc_id, 2, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
+		//  await channelManager.settleThread(channel_id, channel_id, 2, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
 		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, 2, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, 2, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
-		// let channel_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
-		// let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('10')]
-		// await token.approve(channelManager.address, sentBalance[1])
-		// await token.approve(channelManager.address, sentBalance[1], {from: partyI})
-	 //    await channelManager.createChannel(channel_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
-	 //    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
-
-	 //    initialThreadState = web3latest.utils.soliditySha3(
-	 //      { type: 'uint256', value: channel_id }, // thread ID
-	 //      { type: 'uint256', value: 0 }, // sequence
-	 //      { type: 'address', value: partyA }, // partyA
-	 //      { type: 'address', value: partyB }, // partyB
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // bond eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // bond token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('0') }, // eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('0') }  // token
-	 //    )
-
-	 //    let payload_temp = web3latest.utils.soliditySha3(
-	 //      { type: 'uint256', value: channel_id },
-	 //      { type: 'bool', value: false }, // isclose
-	 //      { type: 'uint256', value: 1 }, // sequence
-	 //      { type: 'uint256', value: 1 }, // open threads
-	 //      { type: 'bytes32', value: initialThreadState }, // thread root hash
-	 //      { type: 'address', value: partyA }, // partyA
-	 //      { type: 'address', value: partyI }, // hub
-	 //      { type: 'uint256', value: web3latest.utils.toWei('5') },
-	 //      { type: 'uint256', value: web3latest.utils.toWei('15') },
-	 //      { type: 'uint256', value: web3latest.utils.toWei('5') }, // token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('15') }  // token
-	 //    )
-
-	 //    sigA = await web3latest.eth.sign(payload_temp, partyA)
-  //  	 	sigI = await web3latest.eth.sign(payload_temp, partyI)
-  //  	 	let updateParams = [1, 1, web3latest.utils.toWei('5'), web3latest.utils.toWei('15'), web3latest.utils.toWei('5'), web3latest.utils.toWei('15')]
-  //   	await channelManager.updateChannelState(channel_id, updateParams, initialThreadState, sigA, sigI)
-
-  //   	let balances = [web3latest.utils.toWei('1'), web3latest.utils.toWei('0'), web3latest.utils.toWei('1'), web3latest.utils.toWei('0')]
-	 //    sigA = await web3latest.eth.sign(initialThreadState, partyA)
-	 //    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
-
-	 //    await channelManager.closeThread(channel_id, channel_id)
-
-  //   	let channel = await channelManager.getChannel(channel_id)
-  //   	let thread = await channelManager.getThread(channel_id)
-
-  //   	balances = [web3latest.utils.toWei('0'), web3latest.utils.toWei('1'), web3latest.utils.toWei('0'), web3latest.utils.toWei('1')]
-
-  //   	payload_temp = web3latest.utils.soliditySha3(
-	 //      { type: 'uint256', value: channel_id }, // thread ID
-	 //      { type: 'uint256', value: 2 }, // sequence
-	 //      { type: 'address', value: partyA }, // partyA
-	 //      { type: 'address', value: partyB }, // partyB
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // bond eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // bond token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('0') }, // eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('0') }, // token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }  // token
-	 //    )
-  //   	sigA = await web3latest.eth.sign(payload_temp, partyA)
-  //   	let verificationA = sigA
-
-  // 	    expect(channel[0][0]).to.be.equal(partyA) //pass
-  // 	    expect(channel[9]).to.be.equal(true) //pass
-  // 	    expect(thread[0]).to.be.equal(true) //fail
-  // 	    expect(thread[2]).to.be.below(2) //pass
-  // 	    expect(thread[8][1].toString()).to.be.below(balances[1]) //pass
-  // 	    expect(thread[9][1].toString()).to.be.below(balances[3]) //pass
-  // 	    expect(thread[10][0].toString()).to.be.equal(web3latest.utils.toWei('1')) //pass 
-  // 	    expect(thread[10][1].toString()).to.be.equal(web3latest.utils.toWei('1')) //pass
-  // 	    expect(thread[4].toString()).to.not.be.equal('0') //pass
-  // 	    expect(channel[8]*1000).to.be.below(Date.now()) //pass
-  // 	    expect(sigA).to.be.equal(verificationA) //pass
-  // 	    // expect(thread[4]*1000).to.be.above(Date.now()) //pass
-
- 	//     await channelManager.settleThread(channel_id, channel_id, 2, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("4. Fail: Onchain thread sequence is higher than submitted sequence", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -2085,18 +1698,12 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("5. Fail: State update decreases recipient balance", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -2134,18 +1741,12 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("6. Fail: State update decreases recipient balance", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -2182,19 +1783,13 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(channel[8]*1000).to.be.below(Date.now()) //pass
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
-		 
+	 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("7. Fail: Eth balances do not match bonded amount", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -2232,18 +1827,12 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("8. Fail: Eth balances do not match bonded amount", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -2281,18 +1870,12 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("9. Fail: Initthread was not called first", async () => {
 	  	let channel_id = web3latest.utils.sha3('2222', {encoding: 'hex'})
@@ -2357,18 +1940,12 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(sigA).to.be.equal(verificationA) //pass
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, sigA)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, sigA).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("TODO 10. Fail: updatechannel timeout has not expired", async () => {
 	  		//Not sure how to test this since Initthread can only be called after timeout expires.
@@ -2396,18 +1973,12 @@ contract('ChannelManager :: settleThread()', function(accounts) {
   	    expect(fakeSig).to.not.be.equal(verificationA) //fail
   	    //expect(thread[4]*1000).to.be.above(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, fakeSig).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.settleVC(lc_id, lc_id, sequence, partyA, partyB, balances, fakeSig)
+			await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, fakeSig)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.settleThread(channel_id, channel_id, sequence, partyA, partyB, balances, fakeSig).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("TODO 12. Fail: Updatethread timer has expired", async () => {
 	  		//also unclear how best to unit test
@@ -2610,18 +2181,13 @@ contract('ChannelManager :: closeThread()', function(accounts) {
   	    expect(thread[1]).to.not.be.equal(true) //pass (inverted for nonexistent thread)
   	    expect(thread[4]*1000).to.be.below(Date.now()) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.closeVirtualChannel(lc_id, lc_id).should.be.rejectedWith(SolRevert)
-		 
+
 		 try {
-			await lc.closeVirtualChannel(lc_id, lc_id)
+			await channelManager.closeThread(channel_id, channel_id)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.closeThread(channel_id, channel_id).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: Channel with that ID is not open", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -2633,27 +2199,24 @@ contract('ChannelManager :: closeThread()', function(accounts) {
   	    expect(thread[0]).to.not.be.equal(true) //pass
   	    expect(thread[1]).to.not.be.equal(true) //pass (inverted for nonexistent thread)
   	    expect(thread[4]*1000).to.be.below(Date.now()) //pass
-
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.closeVirtualChannel(lc_id, lc_id).should.be.rejectedWith(SolRevert)
-		 
+ 
 		 try {
-			await lc.closeVirtualChannel(lc_id, lc_id)
+			await channelManager.closeThread(channel_id, channel_id)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
 	  })
-	  it("3. Fail: VC with that ID already closed", async () => {
-	  	let lc_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
+	  it("3. Fail: thread with that ID already closed", async () => {
+	  	let channel_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
 		let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('10')]
-		await token.approve(lc.address, sentBalance[1])
-		await token.approve(lc.address, sentBalance[1], {from: partyI})
-	    await lc.createChannel(lc_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
-	    await lc.joinChannel(lc_id, sentBalance, {from: partyI, value: sentBalance[0]})
+		await token.approve(channelManager.address, sentBalance[1])
+		await token.approve(channelManager.address, sentBalance[1], {from: partyI})
+	    await channelManager.createChannel(channel_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
+	    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
 
-	    initialVCstate = web3latest.utils.soliditySha3(
-	      { type: 'uint256', value: lc_id }, // VC ID
+	    initialThreadState = web3latest.utils.soliditySha3(
+	      { type: 'uint256', value: channel_id }, // thread ID
 	      { type: 'uint256', value: 0 }, // sequence
 	      { type: 'address', value: partyA }, // partyA
 	      { type: 'address', value: partyB }, // partyB
@@ -2666,11 +2229,11 @@ contract('ChannelManager :: closeThread()', function(accounts) {
 	    )
 
 	    let payload_temp = web3latest.utils.soliditySha3(
-	      { type: 'uint256', value: lc_id },
+	      { type: 'uint256', value: channel_id },
 	      { type: 'bool', value: false }, // isclose
 	      { type: 'uint256', value: '1' }, // sequence
-	      { type: 'uint256', value: '1' }, // open VCs
-	      { type: 'bytes32', value: initialVCstate }, // VC root hash
+	      { type: 'uint256', value: '1' }, // open threads
+	      { type: 'bytes32', value: initialThreadState }, // thread root hash
 	      { type: 'address', value: partyA }, // partyA
 	      { type: 'address', value: partyI }, // hub
 	      { type: 'uint256', value: web3latest.utils.toWei('5') },
@@ -2682,91 +2245,31 @@ contract('ChannelManager :: closeThread()', function(accounts) {
 	    sigA = await web3latest.eth.sign(payload_temp, partyA)
    	 	sigI = await web3latest.eth.sign(payload_temp, partyI)
    	 	let updateParams = ['1', '1', web3latest.utils.toWei('5'), web3latest.utils.toWei('15'), web3latest.utils.toWei('5'), web3latest.utils.toWei('15')]
-    	await lc.updateLCstate(lc_id, updateParams, initialVCstate, sigA, sigI)
+    	await channelManager.updateChannelState(channel_id, updateParams, initialThreadState, sigA, sigI)
 
     	let balances = [web3latest.utils.toWei('1'), web3latest.utils.toWei('0'), web3latest.utils.toWei('1'), web3latest.utils.toWei('0')]
-	    sigA = await web3latest.eth.sign(initialVCstate, partyA)
-	    await lc.initVCstate(lc_id, lc_id, 0, partyA, partyB, bond, balances, sigA)
+	    sigA = await web3latest.eth.sign(initialThreadState, partyA)
+	    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
 
-	    await lc.closeVirtualChannel(lc_id, lc_id)
+	    await channelManager.closeThread(channel_id, channel_id)
 
-    	let channel = await lc.getChannel(lc_id)
-    	let vc = await lc.getVirtualChannel(lc_id)
+    	let channel = await channelManager.getChannel(channel_id)
+    	let thread = await channelManager.getThread(channel_id)
 
   	    expect(channel[0][0]).to.be.equal(partyA) //pass
   	    expect(channel[9]).to.be.equal(true) //pass
-  	    expect(vc[0]).to.be.equal(true) //fail
-  	    expect(vc[1]).to.be.equal(true) //pass
-  	    expect(vc[4]*1000).to.be.below(Date.now()) //pass
+  	    expect(thread[0]).to.be.equal(true) //fail
+  	    expect(thread[1]).to.be.equal(true) //pass
+  	    expect(thread[4]*1000).to.be.below(Date.now()) //pass
 
-		//  await lc.closeVirtualChannel(lc_id, lc_id).should.be.rejectedWith(SolRevert)
+		//  await channelManager.closeThread(channel_id, channel_id).should.be.rejectedWith(SolRevert)
 		 
 		 try {
-			await lc.closeVirtualChannel(lc_id, lc_id)
+			await channelManager.closeThread(channel_id, channel_id)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.closeThread(channel_id, channel_id).should.be.rejectedWith(SolRevert)
-	  })
-	  it("3. Fail: thread with that ID already closed", async () => {
-	 //  	let channel_id = web3latest.utils.sha3('closed', {encoding: 'hex'})
-		// let sentBalance = [web3latest.utils.toWei('10'), web3latest.utils.toWei('10')]
-		// await token.approve(channelManager.address, sentBalance[1])
-		// await token.approve(channelManager.address, sentBalance[1], {from: partyI})
-	 //    await channelManager.createChannel(channel_id, partyI, 0, token.address, sentBalance, {from:partyA, value: sentBalance[0]})
-	 //    await channelManager.joinChannel(channel_id, sentBalance, {from: partyI, value: sentBalance[0]})
-
-	 //    initialThreadState = web3latest.utils.soliditySha3(
-	 //      { type: 'uint256', value: channel_id }, // thread ID
-	 //      { type: 'uint256', value: 0 }, // sequence
-	 //      { type: 'address', value: partyA }, // partyA
-	 //      { type: 'address', value: partyB }, // partyB
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // bond eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // bond token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('0') }, // eth
-	 //      { type: 'uint256', value: web3latest.utils.toWei('1') }, // token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('0') }  // token
-	 //    )
-
-	 //    let payload_temp = web3latest.utils.soliditySha3(
-	 //      { type: 'uint256', value: channel_id },
-	 //      { type: 'bool', value: false }, // isclose
-	 //      { type: 'uint256', value: '1' }, // sequence
-	 //      { type: 'uint256', value: '1' }, // open threads
-	 //      { type: 'bytes32', value: initialThreadState }, // thread root hash
-	 //      { type: 'address', value: partyA }, // partyA
-	 //      { type: 'address', value: partyI }, // hub
-	 //      { type: 'uint256', value: web3latest.utils.toWei('5') },
-	 //      { type: 'uint256', value: web3latest.utils.toWei('15') },
-	 //      { type: 'uint256', value: web3latest.utils.toWei('5') }, // token
-	 //      { type: 'uint256', value: web3latest.utils.toWei('15') }  // token
-	 //    )
-
-	 //    sigA = await web3latest.eth.sign(payload_temp, partyA)
-  //  	 	sigI = await web3latest.eth.sign(payload_temp, partyI)
-  //  	 	let updateParams = ['1', '1', web3latest.utils.toWei('5'), web3latest.utils.toWei('15'), web3latest.utils.toWei('5'), web3latest.utils.toWei('15')]
-  //   	await channelManager.updateChannelState(channel_id, updateParams, initialThreadState, sigA, sigI)
-
-  //   	let balances = [web3latest.utils.toWei('1'), web3latest.utils.toWei('0'), web3latest.utils.toWei('1'), web3latest.utils.toWei('0')]
-	 //    sigA = await web3latest.eth.sign(initialThreadState, partyA)
-	 //    await channelManager.initThreadState(channel_id, channel_id, 0, partyA, partyB, bond, balances, sigA)
-
-	 //    await channelManager.closeThread(channel_id, channel_id)
-
-  //   	let channel = await channelManager.getChannel(channel_id)
-  //   	let thread = await channelManager.getThread(channel_id)
-
-  // 	    expect(channel[0][0]).to.be.equal(partyA) //pass
-  // 	    expect(channel[9]).to.be.equal(true) //pass
-  // 	    expect(thread[0]).to.be.equal(true) //fail
-  // 	    expect(thread[1]).to.be.equal(true) //pass
-  // 	    expect(thread[4]*1000).to.be.below(Date.now()) //pass
-
- 	//     await channelManager.closeThread(channel_id, channel_id).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("4. Fail: thread is not in settlement state", async () => {
 	  	// no point testing this since threads cannot exist unless they're in settlement state. We probably don't need this flag too, since its
@@ -2906,19 +2409,12 @@ contract('ChannelManager :: byzantineCloseChannel()', function(accounts) {
   	    expect(parseInt(channel[3][0])).to.be.at.least(parseInt(channel[1][0]) + parseInt(channel[1][1])) //pass
   	    expect(parseInt(channel[3][1])).to.be.at.least(parseInt(channel[2][0]) + parseInt(channel[2][1])) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.byzantineCloseChannel(lc_id).should.be.rejectedWith(SolRevert)
-
 		 try {
-			await lc.byzantineCloseChannel(lc_id)
+			await channelManager.byzantineCloseChannel(channel_id)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-		 
-=======
- 	    await channelManager.byzantineCloseChannel(channel_id).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("2. Fail: Channel with that ID is not open", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -2933,18 +2429,12 @@ contract('ChannelManager :: byzantineCloseChannel()', function(accounts) {
   	    expect(parseInt(channel[3][0])).to.be.at.least(parseInt(channel[1][0]) + parseInt(channel[1][1])) //pass
   	    expect(parseInt(channel[3][1])).to.be.at.least(parseInt(channel[2][0]) + parseInt(channel[2][1])) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.byzantineCloseChannel(lc_id).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.byzantineCloseChannel(lc_id)
+			await channelManager.byzantineCloseChannel(channel_id)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.byzantineCloseChannel(channel_id).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("3. Fail: Channel is not in dispute", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -2964,18 +2454,12 @@ contract('ChannelManager :: byzantineCloseChannel()', function(accounts) {
   	    expect(parseInt(channel[3][0])).to.be.at.least(parseInt(channel[1][0]) + parseInt(channel[1][1])) //pass
   	    expect(parseInt(channel[3][1])).to.be.at.least(parseInt(channel[2][0]) + parseInt(channel[2][1])) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.byzantineCloseChannel(lc_id).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.byzantineCloseChannel(lc_id)
+			await channelManager.byzantineCloseChannel(channel_id)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.byzantineCloseChannel(channel_id).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("4. Fail: UpdatechannelTimeout has not yet expired", async () => {
 	  	let channel_id = web3latest.utils.sha3('fail', {encoding: 'hex'})
@@ -3010,18 +2494,12 @@ contract('ChannelManager :: byzantineCloseChannel()', function(accounts) {
   	    expect(parseInt(channel[3][0])).to.be.at.least(parseInt(channel[1][0]) + parseInt(channel[1][1])) //pass
   	    expect(parseInt(channel[3][1])).to.be.at.least(parseInt(channel[2][0]) + parseInt(channel[2][1])) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.byzantineCloseChannel(lc_id).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.byzantineCloseChannel(lc_id)
+			await channelManager.byzantineCloseChannel(channel_id)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.byzantineCloseChannel(channel_id).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("5. Fail: threads are still open", async () => {
 	  	let channel_id = web3latest.utils.sha3('1111', {encoding: 'hex'})
@@ -3036,18 +2514,12 @@ contract('ChannelManager :: byzantineCloseChannel()', function(accounts) {
   	    expect(parseInt(channel[3][0])).to.be.at.least(parseInt(channel[1][0]) + parseInt(channel[1][1])) //pass
   	    expect(parseInt(channel[3][1])).to.be.at.least(parseInt(channel[2][0]) + parseInt(channel[2][1])) //pass
 
-<<<<<<< HEAD:test/unit/ledgerChannelTest.js
-		//  await lc.byzantineCloseChannel(lc_id).should.be.rejectedWith(SolRevert)
-		 
 		 try {
-			await lc.byzantineCloseChannel(lc_id)
+			await channelManager.byzantineCloseChannel(channel_id)
 		  } catch (e) {
 			expect(e.message).to.equal(SolRevert(e.tx))
 			expect(e.name).to.equal('StatusError')
 		  }
-=======
- 	    await channelManager.byzantineCloseChannel(channel_id).should.be.rejectedWith(SolRevert)
->>>>>>> thread-refactor:test/unit/ChannelManagerTest.js
 	  })
 	  it("6. Fail: Onchain Eth balances are greater than deposit", async () => {
 	  		// can't test this until deposits are complete
