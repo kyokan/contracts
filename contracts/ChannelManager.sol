@@ -295,6 +295,58 @@ contract ChannelManager {
         );
     }
 
+    function withdraw(
+        bytes32 channelId,
+        uint256[2] withdrawals, // [wei, token]
+        uint256 sequence,
+        uint256 numOpenThread,
+        bytes32 threadRootHash,
+        string sigA,
+        string sigI
+    )
+        public 
+        payable 
+    {
+        Channel storage channel = channels[channelId];
+
+        require(channel.status == ChannelStatus.Joined, "withdraw: Channel status must be Joined");
+        require(
+            msg.sender == channel.partyA || msg.sender == hubAddress,
+            "deposit: Sender must be channel member"
+        );
+
+        uint256[2] memory balancesA;
+        uint256[2] memory balancesI;
+        if (msg.sender == channel.partyA) {
+            balancesA[0] = channel.balancesA[0].sub(withdrawals[0]); // wei
+            balancesA[1] = channel.balancesA[1].sub(withdrawals[1]); // token
+        } else if (msg.sender == hubAddress) {
+            balancesI[0] = channel.balancesI[0].sub(withdrawals[0]); // wei
+            balancesI[1] = channel.balancesI[1].sub(withdrawals[1]); // token
+        }
+
+        // checkpoint on chain
+        _checkpointChannel(
+            CheckpointType.Withdraw,
+            channel,
+            channelId,
+            [sequence, numOpenThread, balancesA[0], balancesI[0], balancesA[1], balancesI[1]],
+            threadRootHash,
+            sigA,
+            sigI
+        );
+
+        msg.sender.transfer(withdrawals[0]);
+        require(approvedToken.transfer(msg.sender, withdrawals[1]), "withdraw: Token transfer failure");
+
+        emit DidChannelDeposit(
+            channelId,
+            msg.sender,
+            withdrawals[0], // weiWithdrawal
+            withdrawals[1] // tokenWithdrawal
+        );
+    }
+
     function consensusCloseChannel(
         bytes32 channelId, 
         uint256 sequence, 
