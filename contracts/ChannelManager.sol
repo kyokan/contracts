@@ -33,7 +33,25 @@ contract ChannelManager {
         uint256 tokenDeposit
     );
 
-    event DidChannelUpdateState (
+    event DidChannelWithdraw(
+        bytes32 indexed channelId,
+        address indexed recipient,
+        uint256 weiWithdrawal,
+        uint256 tokenWithdrawal
+    );
+
+    event DidChannelCheckpoint (
+        bytes32 indexed channelId,
+        uint256 sequence, 
+        uint256 weiBalanceA,
+        uint256 tokenBalanceA,
+        uint256 weiBalanceI,
+        uint256 tokenBalanceI,
+        uint256 numOpenThread, 
+        bytes32 threadRoot
+    );
+
+    event DidChannelCheckpointDispute (
         bytes32 indexed channelId,
         uint256 sequence, 
         uint256 weiBalanceA,
@@ -339,7 +357,7 @@ contract ChannelManager {
         msg.sender.transfer(withdrawals[0]);
         require(approvedToken.transfer(msg.sender, withdrawals[1]), "withdraw: Token transfer failure");
 
-        emit DidChannelDeposit(
+        emit DidChannelWithdraw(
             channelId,
             msg.sender,
             withdrawals[0], // weiWithdrawal
@@ -461,7 +479,7 @@ contract ChannelManager {
             sigI
         );
 
-        emit DidChannelUpdateState(
+        emit DidChannelCheckpoint(
             channelId,
             updateParams[0], // sequence
             updateParams[2], // weiBalanceA
@@ -469,8 +487,7 @@ contract ChannelManager {
             updateParams[4], // tokenBalanceA
             updateParams[5], // tokenBalanceI
             updateParams[1], // numOpenThread
-            threadRootHash,
-            channel.updateTimeout
+            threadRootHash
         );
     }
 
@@ -533,7 +550,7 @@ contract ChannelManager {
         );
         channel.updateTimeout = now.add(channel.confirmTime);
 
-        emit DidChannelUpdateState(
+        emit DidChannelCheckpointDispute(
             channelId,
             updateParams[0], // sequence
             updateParams[2], // weiBalanceA
