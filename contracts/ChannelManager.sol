@@ -564,7 +564,6 @@ contract ChannelManager {
     }
 
     // supply initial state of thread to "prime" the force push game 
-    // TODO: combine with settleThread
     function initThread(
         bytes32 channelId, 
         bytes32 threadId, 
