@@ -5,7 +5,7 @@ const HumanStandardToken = artifacts.require(
 );
 
 module.exports = async function(deployer, network, accounts) {
-  deployer.deploy(EC);
+  await deployer.deploy(EC);
 
   let tokenAddress = "0x0"; // change to BOOTY address for mainnet
 
@@ -19,20 +19,13 @@ module.exports = async function(deployer, network, accounts) {
       "TST"
     );
     const hst = await HumanStandardToken.deployed();
-    await Promise.all(
-      accounts.map(async (account, index) => {
-        if (index === 0) {
-          return;
-        }
-        return hst.transfer(
-          account,
-          supply.div(web3.utils.toBN(accounts.length))
-        );
-      })
-    );
     tokenAddress = hst.address;
   }
 
-  deployer.link(EC, LC);
-  await deployer.deploy(LC, tokenAddress, accounts[0]);
+  await deployer.link(EC, LC);
+  await deployer.deploy(
+    LC,
+    "0xdDA6327139485221633A1FcD65f4aC932E60A2e1",
+    accounts[0]
+  );
 };
