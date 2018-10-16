@@ -282,26 +282,54 @@ contract ChannelManager {
             "deposit: Sender must be channel member"
         );
 
-        uint256[2] memory balancesA;
-        uint256[2] memory balancesI;
+        // store deposits by party who sent transaction
+        uint256[2] memory depositA;
+        uint256[2] memory depositI;
         if (msg.sender == channel.partyA) {
-            balancesA[0] = channel.balancesA[0].add(msg.value); // wei
-            balancesA[1] = channel.balancesA[1].add(tokenDeposit); // token
+            depositA[0] = msg.value; // wei
+            depositA[1] = tokenDeposit; // token
         } else if (msg.sender == hubAddress) {
-            balancesI[0] = channel.balancesI[0].add(msg.value); // wei
-            balancesI[1] = channel.balancesI[1].add(tokenDeposit); // token
+            depositI[0] = msg.value; // wei
+            depositI[1] = tokenDeposit; // token
         }
 
+        uint256[14] memory updateParams = [
+            sequence,
+            numOpenThread,
+            channel.balancesA[0], // wei
+            channel.balancesI[0], // wei
+            channel.balancesA[1], // token
+            channel.balancesI[1], // token
+            depositA[0], // pending wei
+            depositI[0], // pending wei
+            depositA[1], // pending token
+            depositI[1], // pending token
+            0, // pending withdrawal
+            0, // pending withdrawal
+            0, // pending withdrawal
+            0 // pending withdrawal
+        ];
+
         // checkpoint on chain
-        _checkpointChannel(
-            CheckpointType.Deposit,
+        _verifyUpdateSig(
             channel,
             channelId,
-            [sequence, numOpenThread, balancesA[0], balancesI[0], balancesA[1], balancesI[1]],
+            false, // isClose
+            updateParams,
             threadRootHash,
             sigA,
             sigI
         );
+
+        // update chain state
+        channel.sequence = updateParams[0];
+        channel.numOpenThread = updateParams[1];
+        // add consensually signed pending deposits to on chain balances
+        channel.balancesA[0] = channel.balancesA[0].add(depositA[0]); // weiBalanceA
+        channel.balancesI[0] = channel.balancesI[0].add(depositI[0]); // weiBalanceI
+        channel.balancesA[1] = channel.balancesA[1].add(depositA[1]); // tokenBalanceA
+        channel.balancesI[1] = channel.balancesI[1].add(depositI[1]); // tokenBalanceI
+        channel.threadRootHash = threadRootHash;
 
         require(approvedToken.transferFrom(msg.sender, this, tokenDeposit), "deposit: token transfer failure");
 
@@ -330,30 +358,60 @@ contract ChannelManager {
         require(channel.status == ChannelStatus.Joined, "withdraw: Channel status must be Joined");
         require(
             msg.sender == channel.partyA || msg.sender == hubAddress,
-            "deposit: Sender must be channel member"
+            "withdraw: Sender must be channel member"
         );
 
-        uint256[2] memory balancesA;
-        uint256[2] memory balancesI;
+        // store withdrawals by party who sent transaction
+        // this causes sig verification to fail if the other party sends the transaction, 
+        // since the withdraw amounts will be different than what was signed for
+        uint256[2] memory withdrawalA;
+        uint256[2] memory withdrawalI;
         if (msg.sender == channel.partyA) {
-            balancesA[0] = channel.balancesA[0].sub(withdrawals[0]); // wei
-            balancesA[1] = channel.balancesA[1].sub(withdrawals[1]); // token
+            withdrawalA[0] = withdrawals[0]; // wei
+            withdrawalA[1] = withdrawals[1]; // token
         } else if (msg.sender == hubAddress) {
-            balancesI[0] = channel.balancesI[0].sub(withdrawals[0]); // wei
-            balancesI[1] = channel.balancesI[1].sub(withdrawals[1]); // token
+            withdrawalI[0] = withdrawals[0]; // wei
+            withdrawalI[1] = withdrawals[1]; // token
         }
 
-        // checkpoint on chain
-        _checkpointChannel(
-            CheckpointType.Withdraw,
+        uint256[14] memory updateParams = [
+            sequence,
+            numOpenThread,
+            channel.balancesA[0], // wei
+            channel.balancesI[0], // wei
+            channel.balancesA[1], // token
+            channel.balancesI[1], // token
+            0, // pending deposit
+            0, // pending deposit
+            0, // pending deposit
+            0, // pending deposit
+            withdrawalA[0], // pending wei withdrawal
+            withdrawalI[0], // pending wei withdrawal
+            withdrawalA[1], // pending token withdrawal
+            withdrawalI[1] // pending token withdrawal
+        ];
+
+        _verifyUpdateSig(
             channel,
             channelId,
-            [sequence, numOpenThread, balancesA[0], balancesI[0], balancesA[1], balancesI[1]],
+            false, // isClose
+            updateParams,
             threadRootHash,
             sigA,
             sigI
         );
 
+        // update chain state
+        channel.sequence = updateParams[0];
+        channel.numOpenThread = updateParams[1];
+        // subtract consensually signed pending withdrawals from on chain balances
+        channel.balancesA[0] = channel.balancesA[0].sub(withdrawalA[0]); // weiBalanceA
+        channel.balancesI[0] = channel.balancesI[0].sub(withdrawalI[0]); // weiBalanceI
+        channel.balancesA[1] = channel.balancesA[1].sub(withdrawalA[1]); // tokenBalanceA
+        channel.balancesI[1] = channel.balancesI[1].sub(withdrawalI[1]); // tokenBalanceI
+        channel.threadRootHash = threadRootHash;
+
+        // not possible to send to the wrong person because the sig will fail if the other party sends
         msg.sender.transfer(withdrawals[0]);
         require(approvedToken.transfer(msg.sender, withdrawals[1]), "withdraw: Token transfer failure");
 
@@ -388,29 +446,32 @@ contract ChannelManager {
         );
         // don't need to check sequence here, don't sign anything else after you have signed this
 
-        bytes32 fingerprint = keccak256(
-            abi.encodePacked(
-                channelId,
-                "CLOSE", // isClose
-                sequence,
-                uint256(0), // numOpenThread
-                bytes32(0x0), // threadRootHash
-                channel.partyA,
-                hubAddress,
-                balances[0],
-                balances[1],
-                balances[2],
-                balances[3]
-            )
-        );
+        uint256[14] memory updateParams = [
+            sequence,
+            uint256(0), // numOpenThread must be 0
+            channel.balancesA[0], // wei
+            channel.balancesI[0], // wei
+            channel.balancesA[1], // token
+            channel.balancesI[1], // token
+            0, // pending deposit
+            0, // pending deposit
+            0, // pending deposit
+            0, // pending deposit
+            0, // pending withdrawal
+            0, // pending withdrawal
+            0, // pending withdrawal
+            0 // pending withdrawal
+        ];
 
-        require(
-            ECTools.recoverSigner(fingerprint, sigA) == channel.partyA,
-            "consensusCloseChannel: Party A signature invalid"
-        );
-        require(
-            ECTools.recoverSigner(fingerprint, sigI) == hubAddress,
-            "consensusCloseChannel: Party I signature invalid"
+        // verify sig and update chain
+        _verifyUpdateSig(
+            channel,
+            channelId,
+            true, // isClose
+            updateParams,
+            bytes32(0x0), // threadRootHash
+            sigA,
+            sigI
         );
 
         // this will prevent reentrancy
@@ -445,7 +506,10 @@ contract ChannelManager {
 
     function checkpointChannel(
         bytes32 channelId, 
-        uint256[6] updateParams, // [sequence, numOpenThread, weiBalanceA, weiBalanceI, tokenBalanceA, tokenBalanceI]
+        // updateParams = [sequence, numOpenThread, weiBalanceA, weiBalanceI, tokenBalanceA, tokenBalanceI, 
+        // pendingDepositWeiA, pendingDepositWeiI, pendingDepositTokenA, pendingDepositTokenI, 
+        // pendingWithdrawalWeiA, pendingWithdrawalWeiI, pendingWithdrawalTokenA, pendingWithdrawalTokenI]
+        uint256[14] updateParams,
         bytes32 threadRootHash, 
         string sigA, 
         string sigI
@@ -469,15 +533,25 @@ contract ChannelManager {
             "checkpointChannel: On-chain token balances must be higher than provided balances"
         );
 
-        _checkpointChannel(
-            CheckpointType.Checkpoint, 
-            channel, 
-            channelId, 
-            updateParams, 
-            threadRootHash, 
-            sigA, 
+        // verify sig and update chain
+        _verifyUpdateSig(
+            channel,
+            channelId,
+            false, // isClose
+            updateParams,
+            threadRootHash, // threadRootHash
+            sigA,
             sigI
         );
+
+        // update chain state, do not account for pending
+        channel.sequence = updateParams[0];
+        channel.numOpenThread = updateParams[1];
+        channel.balancesA[0] = updateParams[2]; // weiBalanceA
+        channel.balancesI[0] = updateParams[3]; // weiBalanceI
+        channel.balancesA[1] = updateParams[4]; // tokenBalanceA
+        channel.balancesI[1] = updateParams[5]; // tokenBalanceI
+        channel.threadRootHash = threadRootHash;
 
         emit DidChannelCheckpoint(
             channelId,
@@ -519,7 +593,10 @@ contract ChannelManager {
 
     function checkpointChannelDispute(
         bytes32 channelId, 
-        uint256[6] updateParams, // [sequence, numOpenThread, weiBalanceA, weiBalanceI, tokenBalanceA, tokenBalanceI]
+        // updateParams = [sequence, numOpenThread, weiBalanceA, weiBalanceI, tokenBalanceA, tokenBalanceI, 
+        // pendingDepositWeiA, pendingDepositWeiI, pendingDepositTokenA, pendingDepositTokenI, 
+        // pendingWithdrawalWeiA, pendingWithdrawalWeiI, pendingWithdrawalTokenA, pendingWithdrawalTokenI]
+        uint256[14] updateParams,
         bytes32 threadRootHash, 
         string sigA, 
         string sigI
@@ -527,7 +604,7 @@ contract ChannelManager {
         public
     {
         Channel storage channel = channels[channelId];
-        require(channel.status == ChannelStatus.Settling, "checkpointChannel: Channel status must be Joined or Settling");
+        require(channel.status == ChannelStatus.Settling, "checkpointChannel: Channel status must be Settling");
         require(now < channel.updateTimeout);
         // input balances can be less than on-chain balances because of balance bonded in threads
         require(
@@ -539,15 +616,25 @@ contract ChannelManager {
             "checkpointChannel: On-chain token balances must be higher than provided balances"
         );
 
-        _checkpointChannel(
-            CheckpointType.Checkpoint, 
-            channel, 
-            channelId, 
-            updateParams, 
-            threadRootHash, 
-            sigA, 
+        // verify sig and update chain
+        _verifyUpdateSig(
+            channel,
+            channelId,
+            false, // isClose
+            updateParams,
+            threadRootHash, // threadRootHash
+            sigA,
             sigI
         );
+
+        // update chain state, do not account for pending
+        channel.sequence = updateParams[0];
+        channel.numOpenThread = updateParams[1];
+        channel.balancesA[0] = updateParams[2]; // weiBalanceA
+        channel.balancesI[0] = updateParams[3]; // weiBalanceI
+        channel.balancesA[1] = updateParams[4]; // tokenBalanceA
+        channel.balancesI[1] = updateParams[5]; // tokenBalanceI
+        channel.threadRootHash = threadRootHash;
         channel.updateTimeout = now.add(channel.confirmTime);
 
         emit DidChannelCheckpointDispute(
@@ -790,11 +877,14 @@ contract ChannelManager {
         );
     }
 
-    function _checkpointChannel(
-        CheckpointType checkpointType,
+    function _verifyUpdateSig(
         Channel storage channel,
         bytes32 channelId,
-        uint256[6] updateParams, // [sequence, numOpenThread, weiBalanceA, weiBalanceI, tokenBalanceA, tokenBalanceI]
+        bool isClose,
+        // updateParams = [sequence, numOpenThread, weiBalanceA, weiBalanceI, tokenBalanceA, tokenBalanceI, 
+        // pendingDepositWeiA, pendingDepositWeiI, pendingDepositTokenA, pendingDepositTokenI, 
+        // pendingWithdrawalWeiA, pendingWithdrawalWeiI, pendingWithdrawalTokenA, pendingWithdrawalTokenI]
+        uint256[14] updateParams,
         bytes32 threadRootHash, 
         string sigA, 
         string sigI
@@ -806,21 +896,10 @@ contract ChannelManager {
             "checkpointChannel: Sequence must be higher or zero-state update"
         );
 
-        string memory flag;
-        if (checkpointType == CheckpointType.Checkpoint) {
-            flag = "CHECKPOINT";
-        } else if (checkpointType == CheckpointType.Deposit) {
-            flag = "DEPOSIT";
-        } else if (checkpointType == CheckpointType.Withdraw) {
-            flag = "WITHDRAW";
-        } else {
-            revert("Invalid checkpoint type");
-        }
-
         bytes32 fingerprint = keccak256(
             abi.encodePacked(
                 channelId,
-                flag,
+                isClose,
                 updateParams[0], // sequence
                 updateParams[1], // numOpenThread
                 threadRootHash,
@@ -829,7 +908,15 @@ contract ChannelManager {
                 updateParams[2], // weiBalanceA
                 updateParams[3], // weiBalanceI
                 updateParams[4], // tokenBalanceA
-                updateParams[5] // tokenBalanceI
+                updateParams[5], // tokenBalanceI
+                updateParams[6], // pendingDepositWeiA
+                updateParams[7], // pendingDepositWeiI
+                updateParams[8], // pendingDepositTokenA
+                updateParams[9], // pendingDepositTokenI
+                updateParams[10], // pendingWithdrawalWeiA
+                updateParams[11], // pendingWithdrawalWeiI
+                updateParams[12], // pendingWithdrawalTokenA
+                updateParams[13] // pendingWithdrawalTokenI
             )
         );
 
@@ -841,15 +928,6 @@ contract ChannelManager {
             ECTools.recoverSigner(fingerprint, sigI) == hubAddress,
             "checkpointChannel: Party I signature invalid"
         );
-
-        // update chain state
-        channel.sequence = updateParams[0];
-        channel.numOpenThread = updateParams[1];
-        channel.balancesA[0] = updateParams[2]; // weiBalanceA
-        channel.balancesI[0] = updateParams[3]; // weiBalanceI
-        channel.balancesA[1] = updateParams[4]; // tokenBalanceA
-        channel.balancesI[1] = updateParams[5]; // tokenBalanceI
-        channel.threadRootHash = threadRootHash;
     }
 
     function _isContained(bytes32 _hash, bytes _proof, bytes32 _root) internal pure returns (bool) {
