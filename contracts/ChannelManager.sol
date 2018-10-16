@@ -293,37 +293,35 @@ contract ChannelManager {
             depositI[1] = tokenDeposit; // token
         }
 
-        uint256[14] memory updateParams = [
-            sequence,
-            numOpenThread,
-            channel.balancesA[0], // wei
-            channel.balancesI[0], // wei
-            channel.balancesA[1], // token
-            channel.balancesI[1], // token
-            depositA[0], // pending wei
-            depositI[0], // pending wei
-            depositA[1], // pending token
-            depositI[1], // pending token
-            0, // pending withdrawal
-            0, // pending withdrawal
-            0, // pending withdrawal
-            0 // pending withdrawal
-        ];
-
         // checkpoint on chain
         _verifyUpdateSig(
             channel,
             channelId,
             false, // isClose
-            updateParams,
+            [
+                sequence,
+                numOpenThread,
+                channel.balancesA[0], // wei
+                channel.balancesI[0], // wei
+                channel.balancesA[1], // token
+                channel.balancesI[1], // token
+                depositA[0], // pending wei
+                depositI[0], // pending wei
+                depositA[1], // pending token
+                depositI[1], // pending token
+                0, // pending withdrawal
+                0, // pending withdrawal
+                0, // pending withdrawal
+                0 // pending withdrawal
+            ],
             threadRootHash,
             sigA,
             sigI
         );
 
         // update chain state
-        channel.sequence = updateParams[0];
-        channel.numOpenThread = updateParams[1];
+        channel.sequence = sequence;
+        channel.numOpenThread = numOpenThread;
         // add consensually signed pending deposits to on chain balances
         channel.balancesA[0] = channel.balancesA[0].add(depositA[0]); // weiBalanceA
         channel.balancesI[0] = channel.balancesI[0].add(depositI[0]); // weiBalanceI
@@ -374,36 +372,34 @@ contract ChannelManager {
             withdrawalI[1] = withdrawals[1]; // token
         }
 
-        uint256[14] memory updateParams = [
-            sequence,
-            numOpenThread,
-            channel.balancesA[0], // wei
-            channel.balancesI[0], // wei
-            channel.balancesA[1], // token
-            channel.balancesI[1], // token
-            0, // pending deposit
-            0, // pending deposit
-            0, // pending deposit
-            0, // pending deposit
-            withdrawalA[0], // pending wei withdrawal
-            withdrawalI[0], // pending wei withdrawal
-            withdrawalA[1], // pending token withdrawal
-            withdrawalI[1] // pending token withdrawal
-        ];
-
         _verifyUpdateSig(
             channel,
             channelId,
             false, // isClose
-            updateParams,
+            [
+                sequence,
+                numOpenThread,
+                channel.balancesA[0], // wei
+                channel.balancesI[0], // wei
+                channel.balancesA[1], // token
+                channel.balancesI[1], // token
+                0, // pending deposit
+                0, // pending deposit
+                0, // pending deposit
+                0, // pending deposit
+                withdrawalA[0], // pending wei withdrawal
+                withdrawalI[0], // pending wei withdrawal
+                withdrawalA[1], // pending token withdrawal
+                withdrawalI[1] // pending token withdrawal
+            ],
             threadRootHash,
             sigA,
             sigI
         );
 
         // update chain state
-        channel.sequence = updateParams[0];
-        channel.numOpenThread = updateParams[1];
+        channel.sequence = sequence;
+        channel.numOpenThread = numOpenThread;
         // subtract consensually signed pending withdrawals from on chain balances
         channel.balancesA[0] = channel.balancesA[0].sub(withdrawalA[0]); // weiBalanceA
         channel.balancesI[0] = channel.balancesI[0].sub(withdrawalI[0]); // weiBalanceI
@@ -446,29 +442,27 @@ contract ChannelManager {
         );
         // don't need to check sequence here, don't sign anything else after you have signed this
 
-        uint256[14] memory updateParams = [
-            sequence,
-            uint256(0), // numOpenThread must be 0
-            channel.balancesA[0], // wei
-            channel.balancesI[0], // wei
-            channel.balancesA[1], // token
-            channel.balancesI[1], // token
-            0, // pending deposit
-            0, // pending deposit
-            0, // pending deposit
-            0, // pending deposit
-            0, // pending withdrawal
-            0, // pending withdrawal
-            0, // pending withdrawal
-            0 // pending withdrawal
-        ];
-
         // verify sig and update chain
         _verifyUpdateSig(
             channel,
             channelId,
             true, // isClose
-            updateParams,
+            [
+                sequence,
+                uint256(0), // numOpenThread must be 0
+                channel.balancesA[0], // wei
+                channel.balancesI[0], // wei
+                channel.balancesA[1], // token
+                channel.balancesI[1], // token
+                0, // pending deposit
+                0, // pending deposit
+                0, // pending deposit
+                0, // pending deposit
+                0, // pending withdrawal
+                0, // pending withdrawal
+                0, // pending withdrawal
+                0 // pending withdrawal
+            ],
             bytes32(0x0), // threadRootHash
             sigA,
             sigI
@@ -623,7 +617,7 @@ contract ChannelManager {
             false, // isClose
             updateParams,
             threadRootHash, // threadRootHash
-            sigA,
+            sigA, 
             sigI
         );
 
@@ -886,7 +880,7 @@ contract ChannelManager {
         // pendingWithdrawalWeiA, pendingWithdrawalWeiI, pendingWithdrawalTokenA, pendingWithdrawalTokenI]
         uint256[14] updateParams,
         bytes32 threadRootHash, 
-        string sigA, 
+        string sigA,
         string sigI
     )
         internal
@@ -896,27 +890,33 @@ contract ChannelManager {
             "checkpointChannel: Sequence must be higher or zero-state update"
         );
 
+        // need to encode double here because of weird stack issues
+        // see: https://github.com/ethereum/solidity/issues/2931#issuecomment-422024109
         bytes32 fingerprint = keccak256(
             abi.encodePacked(
-                channelId,
-                isClose,
-                updateParams[0], // sequence
-                updateParams[1], // numOpenThread
-                threadRootHash,
-                channel.partyA,
-                hubAddress, // partyI
-                updateParams[2], // weiBalanceA
-                updateParams[3], // weiBalanceI
-                updateParams[4], // tokenBalanceA
-                updateParams[5], // tokenBalanceI
-                updateParams[6], // pendingDepositWeiA
-                updateParams[7], // pendingDepositWeiI
-                updateParams[8], // pendingDepositTokenA
-                updateParams[9], // pendingDepositTokenI
-                updateParams[10], // pendingWithdrawalWeiA
-                updateParams[11], // pendingWithdrawalWeiI
-                updateParams[12], // pendingWithdrawalTokenA
-                updateParams[13] // pendingWithdrawalTokenI
+                abi.encodePacked(
+                    channelId,
+                    isClose,
+                    updateParams[0], // sequence
+                    updateParams[1], // numOpenThread
+                    threadRootHash,
+                    channel.partyA,
+                    hubAddress, // partyI
+                    updateParams[2], // weiBalanceA
+                    updateParams[3], // weiBalanceI
+                    updateParams[4], // tokenBalanceA
+                    updateParams[5] // tokenBalanceI
+                ),
+                abi.encodePacked(
+                    updateParams[6], // pendingDepositWeiA
+                    updateParams[7], // pendingDepositWeiI
+                    updateParams[8], // pendingDepositTokenA
+                    updateParams[9], // pendingDepositTokenI
+                    updateParams[10], // pendingWithdrawalWeiA
+                    updateParams[11], // pendingWithdrawalWeiI
+                    updateParams[12], // pendingWithdrawalTokenA
+                    updateParams[13] // pendingWithdrawalTokenI
+                )
             )
         );
 
