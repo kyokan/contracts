@@ -1,21 +1,9 @@
 "use strict";
-import MerkleTree from "../helpers/MerkleTree";
 const Utils = require("../helpers/utils");
-const Ledger = artifacts.require("./LedgerChannel.sol");
+const Ledger = artifacts.require("./ChannelManager.sol");
 const EC = artifacts.require("./ECTools.sol");
 const Token = artifacts.require("./token/HumanStandardToken.sol");
-
-const Web3latest = require("web3");
-const web3latest = new Web3latest(
-  new Web3latest.providers.HttpProvider("http://localhost:8545")
-); //ganache port
-const BigNumber = web3.BigNumber;
 const Connext = require("connext");
-
-const should = require("chai")
-  .use(require("chai-as-promised"))
-  .use(require("chai-bignumber")(BigNumber))
-  .should();
 
 // GENERAL TO DOs:
 // For the passing case
@@ -100,7 +88,7 @@ contract("LedgerChannel :: createChannel()", function(accounts) {
   });
 
   describe("Creating a channel has 7 possible cases:", () => {
-    it("1. Fail: Channel with that ID has already been created", async () => {
+    it.only("1. Fail: Channel with that ID has already been created", async () => {
       const lcId = web3latest.utils.sha3("fail", { encoding: "hex" });
       const sentBalance = [
         web3latest.utils.toWei("10"),
