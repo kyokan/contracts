@@ -1,4 +1,5 @@
 pragma solidity ^0.4.24;
+pragma experimental ABIEncoderV2;
 
 import "./lib/ECTools.sol";
 import "./lib/token/HumanStandardToken.sol";
@@ -162,6 +163,7 @@ contract ChannelManager {
     mapping(bytes32 => Thread) public threads;
     mapping(bytes32 => Channel) public channels;
 
+    bool topLevel = true;
 
     // globals
     HumanStandardToken public approvedToken;
@@ -180,6 +182,7 @@ contract ChannelManager {
         public
         payable 
     {
+        require(topLevel, "createChannel: Top level function can only be called directly");
         require(channels[channelId].status == ChannelStatus.Nonexistent, "createChannel: Channel already exists");
         require(msg.sender != hubAddress, "createChannel: Cannot create channel with yourself");
 
@@ -208,6 +211,8 @@ contract ChannelManager {
     }
 
     function channelOpenTimeout(bytes32 channelId) public {
+        require(topLevel, "channelOpenTimeout: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
 
         require(msg.sender == channel.partyA, "channelOpenTimeout: Request not sent by partyA");
@@ -241,6 +246,8 @@ contract ChannelManager {
     }
 
     function joinChannel(bytes32 channelId, uint256 tokenBalance) public payable {
+        require(topLevel, "joinChannel: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
 
         require(channel.status == ChannelStatus.Opened, "joinChannel: Channel status must be Opened");
@@ -274,6 +281,8 @@ contract ChannelManager {
         public 
         payable 
     {
+        require(topLevel, "deposit: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
 
         require(channel.status == ChannelStatus.Joined, "deposit: Channel status must be Joined");
@@ -351,6 +360,8 @@ contract ChannelManager {
         public 
         payable 
     {
+        require(topLevel, "withdraw: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
 
         require(channel.status == ChannelStatus.Joined, "withdraw: Channel status must be Joined");
@@ -428,6 +439,8 @@ contract ChannelManager {
     ) 
         public 
     {
+        require(topLevel, "consensusCloseChannel: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
 
         require(channel.status == ChannelStatus.Joined, "consensusCloseChannel: Channel status must be Joined");
@@ -510,6 +523,8 @@ contract ChannelManager {
     ) 
         public
     {
+        require(topLevel, "checkpointChannel: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
         require(channel.status == ChannelStatus.Joined, "checkpointChannel: Channel status must be Joined or Settling");
         // require for all checkpoints
@@ -561,6 +576,8 @@ contract ChannelManager {
 
     // BYZANTINE FUNCTIONS
     function startChannelSettlement(bytes32 channelId) public {
+        require(topLevel, "startChannelSettlement: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
 
         require(msg.sender == channel.partyA || msg.sender == hubAddress, "startChannelSettlement: Sender must be part of channel");
@@ -597,6 +614,8 @@ contract ChannelManager {
     ) 
         public
     {
+        require(topLevel, "checkpointChannelDispute: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
         require(channel.status == ChannelStatus.Settling, "checkpointChannel: Channel status must be Settling");
         require(now < channel.updateTimeout);
@@ -656,6 +675,7 @@ contract ChannelManager {
     ) 
         public 
     {
+        require(topLevel, "initThread: Top level function can only be called directly");
         require(msg.sender == partyA || msg.sender == partyB || msg.sender == hubAddress, "initThread: Sender must be part of thread");
         require(channels[channelId].status == ChannelStatus.Settling, "initThread: Channel status must be Settling");
         require(threads[threadId].status == ThreadStatus.Nonexistent, "initThread: Thread exists");
@@ -717,6 +737,8 @@ contract ChannelManager {
     ) 
         public 
     {
+        require(topLevel, "settleThread: Top level function can only be called directly");
+
         Thread storage thread = threads[threadId];
 
         require(
@@ -783,6 +805,8 @@ contract ChannelManager {
     }
 
     function closeThread(bytes32 channelId, bytes32 threadId) public {
+        require(topLevel, "closeThread: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
         Thread storage thread = threads[threadId];
 
@@ -829,6 +853,8 @@ contract ChannelManager {
 
     // TODO: allow either LC end-user to nullify the settled LC state and return to off-chain
     function byzantineCloseChannel(bytes32 channelId) public {
+        require(topLevel, "byzantineCloseChannel: Top level function can only be called directly");
+
         Channel storage channel = channels[channelId];
 
         // check settlement flag
@@ -884,6 +910,7 @@ contract ChannelManager {
         string sigI
     )
         internal
+        view
     {
         require(
             updateParams[0] > channel.sequence,
