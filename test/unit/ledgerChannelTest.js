@@ -121,7 +121,7 @@ contract("ChannelManager :: createChannel()", function(accounts) {
       const channelId = web3.utils.sha3("fail", { encoding: "hex" });
       const sentBalance = [web3.utils.toWei("10"), web3.utils.toWei("10")];
       const challenge = 0;
-      let approval = await token.approve(channelManager.address, sentBalance[1]);
+      await token.approve(channelManager.address, sentBalance[1]);
       await channelManager.createChannel(
         channelId,
         challenge,
@@ -140,35 +140,13 @@ contract("ChannelManager :: createChannel()", function(accounts) {
       ); // channel exists on chain
 
       // approve second transfer
-      approval = await token.approve(channelManager.address, sentBalance[1]);
+      await token.approve(channelManager.address, sentBalance[1]);
       await channelManager
         .createChannel(channelId, "0", sentBalance[1], {
           from: partyA,
           value: sentBalance[0]
         })
         .should.be.rejectedWith("Channel already exists.");
-    });
-
-    it("2. Fail: No Hub address was provided.", async () => {
-      const channelManagerId = web3.utils.sha3("1111", { encoding: "hex" });
-      const sentBalance = [web3.utils.toWei("10"), web3.utils.toWei("10")];
-      const approval = await token.approve(channelManager.address, sentBalance[1]);
-      const challenge = 0;
-      const nullAddress = "0x0000000000000000000000000000000000000000";
-
-      await channelManager
-        .createChannel(
-          channelManagerId,
-          nullAddress,
-          challenge,
-          token.address,
-          sentBalance,
-          {
-            from: partyA,
-            value: sentBalance[0]
-          }
-        )
-        .should.be.rejectedWith("Channel must be created with hub.");
     });
 
     it("3. Fail: Token has not been whitelisted", async () => {
