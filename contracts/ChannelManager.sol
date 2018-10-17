@@ -174,9 +174,11 @@ contract ChannelManager {
         hubAddress = _hubAddress;
     }
 
+    // createChannel is called by the user after getting a sig from the hub verifying the parameters
+    // the hubs funds are assumed to be already loaded onto this contract (checked in this function)
     function createChannel(
         bytes32 channelId,
-        uint256 confirmTime, // TODO can we hardcode this too?
+        uint256 confirmTime,
         uint256 tokenBalance
     )
         public
