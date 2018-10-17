@@ -168,6 +168,8 @@ contract ChannelManager {
     // globals
     HumanStandardToken public approvedToken;
     address public hubAddress;
+    uint256 totalBondedAmountWei;
+    uint256 totalBondedAmountToken;
 
     constructor(address _tokenAddress, address _hubAddress) public {
         approvedToken = HumanStandardToken(_tokenAddress);
@@ -175,11 +177,16 @@ contract ChannelManager {
     }
 
     // createChannel is called by the user after getting a sig from the hub verifying the parameters
-    // the hubs funds are assumed to be already loaded onto this contract (checked in this function)
+    // the hubs funds are assumed to be already loaded onto this contract (checked in this function).
+    // payable amount is the weiBalanceA, so no need to pass it in
     function createChannel(
         bytes32 channelId,
+        uint256 weiBalanceI,
+        uint256 tokenBalanceA,
+        uint256 tokenBalanceI,
+        uint256 expiry,
         uint256 confirmTime,
-        uint256 tokenBalance
+        string sigI
     )
         public
         payable 
@@ -187,21 +194,55 @@ contract ChannelManager {
         require(topLevel, "createChannel: Top level function can only be called directly");
         require(channels[channelId].status == ChannelStatus.Nonexistent, "createChannel: Channel already exists");
         require(msg.sender != hubAddress, "createChannel: Cannot create channel with yourself");
+        require(now < expiry, "createChannel: Expiry time is over, channel cannot be created");
+        require(
+            address(this).balance.sub(totalBondedAmountWei) > weiBalanceI,
+            "createChannel: Contract wei funds not sufficient to create channel"
+        );
+        require(
+            approvedToken.balanceOf(address(this)).sub(totalBondedAmountToken) > tokenBalanceI,
+            "createChannel: Contract token funds not sufficient to create channel"
+        );
 
-        // Set initial ledger channel state
-        // Alice must execute this and we assume the initial state 
-        // to be signed from this requirement
+        bytes32 fingerprint = keccak256(
+            abi.encodePacked(
+                channelId,
+                msg.sender, // partyA
+                hubAddress, // partyI
+                msg.value, // weiBalanceA
+                weiBalanceI,
+                tokenBalanceA,
+                tokenBalanceI,
+                expiry,
+                confirmTime
+            )
+        );
+
+        // make sure hub address signed the opening sig
+        require(
+            ECTools.recoverSigner(fingerprint, sigI) == hubAddress,
+            "createChannel: Party A signature invalid"
+        );
+
         Channel storage channel = channels[channelId];
 
+        // channel attributes
         channel.status = ChannelStatus.Opened;
         channel.partyA = msg.sender; // partyA
         channel.sequence = 0;
         channel.confirmTime = confirmTime;
         channel.openTimeout = now.add(confirmTime);
 
+        // channel balances
         channel.balancesA[0] = msg.value; // wei deposit
-        require(approvedToken.transferFrom(msg.sender, this, tokenBalance), "createChannel: Token transfer failure");
-        channel.balancesA[1] = tokenBalance; // token deposit
+        channel.balancesI[0] = weiBalanceI;
+        require(approvedToken.transferFrom(msg.sender, this, tokenBalanceA), "createChannel: Token transfer failure");
+        channel.balancesA[1] = tokenBalanceA; // token deposit
+        channel.balancesI[1] = tokenBalanceI; // token deposit
+
+        // add to running total of bonded amount
+        totalBondedAmountWei = totalBondedAmountWei.add(channel.balancesI[0]);
+        totalBondedAmountToken = totalBondedAmountToken.add(channel.balancesI[0]);
 
         emit DidChannelOpen(
             channelId, 
