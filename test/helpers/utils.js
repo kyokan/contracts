@@ -1,42 +1,9 @@
 const Buffer = require("buffer").Buffer;
-const util = require("ethereumjs-util");
-const Web3latest = require("web3");
-const web3latest = new Web3latest(
-  new Web3latest.providers.HttpProvider("http://localhost:8545")
-);
 
 module.exports = {
   latestTime: async function latestTime() {
-    let t = await web3latest.eth.getBlock("latest").timestamp;
+    let t = await web3.eth.getBlock("latest").timestamp;
     return t;
-  },
-
-  increaseTime: function increaseTime(duration) {
-    const id = Date.now();
-    return new Promise((resolve, reject) => {
-      web3latest.currentProvider.send(
-        {
-          jsonrpc: "2.0",
-          method: "evm_increaseTime",
-          params: [duration],
-          id: id
-        },
-        e1 => {
-          if (e1) return reject(e1);
-
-          web3latest.currentProvider.send(
-            {
-              jsonrpc: "2.0",
-              method: "evm_mine",
-              id: id + 1
-            },
-            (e2, res) => {
-              return e2 ? reject(e2) : resolve(res);
-            }
-          );
-        }
-      );
-    });
   },
 
   increaseTimeTo: function increaseTimeTo(target) {
@@ -46,7 +13,7 @@ module.exports = {
         `Cannot increase current time(${now}) to a moment in the past(${target})`
       );
     let diff = target - now;
-    return this.increaseTime(diff);
+    return web3.eth.increaseTime(diff);
   },
 
   assertThrowsAsync: async function assertThrowsAsync(fn, regExp) {
@@ -107,8 +74,8 @@ module.exports = {
 
   getBytes: function getBytes(input) {
     if (Buffer.isBuffer(input)) input = "0x" + input.toString("hex");
-    if (66 - input.length <= 0) return web3latest.utils.toHex(input);
-    return this.padBytes32(web3latest.utils.toHex(input));
+    if (66 - input.length <= 0) return web3.utils.toHex(input);
+    return this.padBytes32(web3.utils.toHex(input));
   },
 
   marshallState: function marshallState(inputs) {
@@ -122,7 +89,7 @@ module.exports = {
   },
 
   getCTFaddress: async function getCTFaddress(_r) {
-    return web3latest.sha3(_r, { encoding: "hex" });
+    return web3.sha3(_r, { encoding: "hex" });
   },
 
   getCTFstate: async function getCTFstate(_contract, _signers, _args) {
