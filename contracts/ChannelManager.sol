@@ -163,17 +163,38 @@ contract ChannelManager {
     mapping(bytes32 => Thread) public threads;
     mapping(bytes32 => Channel) public channels;
 
-    bool topLevel = true;
-
     // globals
     HumanStandardToken public approvedToken;
     address public hubAddress;
     uint256 totalBondedAmountWei;
     uint256 totalBondedAmountToken;
 
+    // reentrancy protection
+    bool locked = false;
+    modifier noReentrancy() {
+        require(!locked, "Reentrant call");
+
+        locked = true;
+        _;
+        locked = false;
+    }
+
+    modifier onlyHub() {
+        require(msg.sender == hubAddress, "Function is restricted to hub");
+        _;
+    }
+
     constructor(address _tokenAddress, address _hubAddress) public {
         approvedToken = HumanStandardToken(_tokenAddress);
         hubAddress = _hubAddress;
+    }
+
+    function _getUnallocatedHubFundsWei() public view returns (uint256) {
+        return address(this).balance.sub(totalBondedAmountWei);
+    }
+
+    function _getUnallocatedHubFundsToken() public view returns (uint256) {
+        return approvedToken.balanceOf(address(this)).sub(totalBondedAmountToken);
     }
 
     // createChannel is called by the user after getting a sig from the hub verifying the parameters
@@ -189,18 +210,18 @@ contract ChannelManager {
         string sigI
     )
         public
-        payable 
+        payable
+        noReentrancy
     {
-        require(topLevel, "createChannel: Top level function can only be called directly");
         require(channels[channelId].status == ChannelStatus.Nonexistent, "createChannel: Channel already exists");
         require(msg.sender != hubAddress, "createChannel: Cannot create channel with yourself");
         require(now < expiry, "createChannel: Expiry time is over, channel cannot be created");
         require(
-            address(this).balance.sub(totalBondedAmountWei) > weiBalanceI,
+            _getUnallocatedHubFundsWei() > weiBalanceI,
             "createChannel: Contract wei funds not sufficient to create channel"
         );
         require(
-            approvedToken.balanceOf(address(this)).sub(totalBondedAmountToken) > tokenBalanceI,
+            _getUnallocatedHubFundsToken() > tokenBalanceI,
             "createChannel: Contract token funds not sufficient to create channel"
         );
 
@@ -236,7 +257,10 @@ contract ChannelManager {
         // channel balances
         channel.balancesA[0] = msg.value; // wei deposit
         channel.balancesI[0] = weiBalanceI;
-        require(approvedToken.transferFrom(msg.sender, this, tokenBalanceA), "createChannel: Token transfer failure");
+        require(
+            approvedToken.transferFrom(msg.sender, this, tokenBalanceA),
+            "createChannel: Token transfer failure"
+        );
         channel.balancesA[1] = tokenBalanceA; // token deposit
         channel.balancesI[1] = tokenBalanceI; // token deposit
 
@@ -253,67 +277,11 @@ contract ChannelManager {
         );
     }
 
-    function channelOpenTimeout(bytes32 channelId) public {
-        require(topLevel, "channelOpenTimeout: Top level function can only be called directly");
-
-        Channel storage channel = channels[channelId];
-
-        require(msg.sender == channel.partyA, "channelOpenTimeout: Request not sent by partyA");
-        require(channel.status == ChannelStatus.Opened, "channelOpenTimeout: Channel status must be Opened");
-        require(now > channel.openTimeout, "channelOpenTimeout: Channel openTimeout has not expired");
-
-        // reentrancy protection
-        channel.status = ChannelStatus.Settled;
-        uint256 weiBalanceA = channel.balancesA[0];
-        uint256 tokenBalanceA = channel.balancesA[1];
-
-        channel.balancesA[0] = 0; // wei
-        channel.balancesA[1] = 0; // token
-        channel.balancesI[0] = 0; // wei
-        channel.balancesI[1] = 0; // token
-
-        channel.partyA.transfer(weiBalanceA);
-        require(
-            approvedToken.transfer(channel.partyA, tokenBalanceA),
-            "channelOpenTimeout: Token transfer failure"
-        );
-
-        emit DidChannelClose(
-            channelId,
-            0, // sequence
-            weiBalanceA,
-            tokenBalanceA,
-            0, // weiBalanceI
-            0 // tokenBalanceI
-        );
-    }
-
-    function joinChannel(bytes32 channelId, uint256 tokenBalance) public payable {
-        require(topLevel, "joinChannel: Top level function can only be called directly");
-
-        Channel storage channel = channels[channelId];
-
-        require(channel.status == ChannelStatus.Opened, "joinChannel: Channel status must be Opened");
-        require(msg.sender == hubAddress, "joinChannel: Channel can only be joined by counterparty");
-
-        channel.status = ChannelStatus.Joined;
-
-        channel.balancesI[0] = msg.value; // wei
-        require(
-            approvedToken.transferFrom(msg.sender, this, tokenBalance),
-            "joinChannel: token transfer failure"
-        );
-        channel.balancesI[1] = tokenBalance; // token
-
-        emit DidChannelJoin(
-            channelId,
-            channel.balancesI[0], // wei
-            channel.balancesI[1] // token
-        );
-    }
-
+    // deposit can be called be either party to add balance to the channel. this requires a double signed message
+    // containing the deposit amount as a pending deposit.
     function deposit(
         bytes32 channelId,
+        uint weiDeposit, // needs to be specified because if it's hub it won't be transferred
         uint256 tokenDeposit,
         uint256 sequence,
         uint256 numOpenThread,
@@ -321,11 +289,10 @@ contract ChannelManager {
         string sigA,
         string sigI
     )
-        public 
-        payable 
+        public
+        payable
+        noReentrancy
     {
-        require(topLevel, "deposit: Top level function can only be called directly");
-
         Channel storage channel = channels[channelId];
 
         require(channel.status == ChannelStatus.Joined, "deposit: Channel status must be Joined");
@@ -334,14 +301,28 @@ contract ChannelManager {
             "deposit: Sender must be channel member"
         );
 
+        // if hub deposits it will be coming from the unallocated funds so we need to make sure there is enough
+        if (msg.sender == hubAddress) {
+            require(
+                _getUnallocatedHubFundsWei() > weiDeposit,
+                "deposit: Contract wei funds not sufficient to create channel"
+            );
+            require(
+                _getUnallocatedHubFundsToken() > tokenDeposit,
+                "deposit: Contract token funds not sufficient to create channel"
+            );
+        } else {
+            require(weiDeposit == msg.value, "deposit: Value must match amount specified");
+        }
+
         // store deposits by party who sent transaction
         uint256[2] memory depositA;
         uint256[2] memory depositI;
         if (msg.sender == channel.partyA) {
-            depositA[0] = msg.value; // wei
+            depositA[0] = weiDeposit; // wei
             depositA[1] = tokenDeposit; // token
-        } else if (msg.sender == hubAddress) {
-            depositI[0] = msg.value; // wei
+        } else {
+            depositI[0] = weiDeposit; // wei
             depositI[1] = tokenDeposit; // token
         }
 
@@ -381,7 +362,13 @@ contract ChannelManager {
         channel.balancesI[1] = channel.balancesI[1].add(depositI[1]); // tokenBalanceI
         channel.threadRootHash = threadRootHash;
 
-        require(approvedToken.transferFrom(msg.sender, this, tokenDeposit), "deposit: token transfer failure");
+        // transfer tokens if partyA, otherwise just add to contract's locked up amount
+        if (msg.sender == channel.partyA) {
+            require(approvedToken.transferFrom(msg.sender, this, tokenDeposit), "deposit: token transfer failure");
+        } else {
+            totalBondedAmountWei = totalBondedAmountWei.add(weiDeposit);
+            totalBondedAmountToken = totalBondedAmountToken.add(tokenDeposit);
+        }
 
         emit DidChannelDeposit(
             channelId,
@@ -400,11 +387,10 @@ contract ChannelManager {
         string sigA,
         string sigI
     )
-        public 
-        payable 
+        public
+        payable
+        noReentrancy
     {
-        require(topLevel, "withdraw: Top level function can only be called directly");
-
         Channel storage channel = channels[channelId];
 
         require(channel.status == ChannelStatus.Joined, "withdraw: Channel status must be Joined");
@@ -419,9 +405,27 @@ contract ChannelManager {
         uint256[2] memory withdrawalA;
         uint256[2] memory withdrawalI;
         if (msg.sender == channel.partyA) {
+            require(
+                withdrawals[0] >= channel.balancesA[0],
+                "withdraw: Channel wei balance is less than requested withdrawal"
+            );
+            require(
+                withdrawals[1] >= channel.balancesA[1],
+                "withdraw: Channel wei balance is less than requested withdrawal"
+            );
+
             withdrawalA[0] = withdrawals[0]; // wei
             withdrawalA[1] = withdrawals[1]; // token
         } else if (msg.sender == hubAddress) {
+            require(
+                withdrawals[0] >= channel.balancesI[0],
+                "withdraw: Channel wei balance is less than requested withdrawal"
+            );
+            require(
+                withdrawals[1] >= channel.balancesI[1],
+                "withdraw: Channel wei balance is less than requested withdrawal"
+            );
+
             withdrawalI[0] = withdrawals[0]; // wei
             withdrawalI[1] = withdrawals[1]; // token
         }
@@ -462,8 +466,13 @@ contract ChannelManager {
         channel.threadRootHash = threadRootHash;
 
         // not possible to send to the wrong person because the sig will fail if the other party sends
-        msg.sender.transfer(withdrawals[0]);
-        require(approvedToken.transfer(msg.sender, withdrawals[1]), "withdraw: Token transfer failure");
+        if (msg.sender == channel.partyA) {
+            msg.sender.transfer(withdrawals[0]);
+            require(approvedToken.transfer(msg.sender, withdrawals[1]), "withdraw: Token transfer failure");
+        } else {
+            totalBondedAmountWei = totalBondedAmountWei.sub(withdrawals[0]);
+            totalBondedAmountToken = totalBondedAmountToken.sub(withdrawals[1]);
+        }
 
         emit DidChannelWithdraw(
             channelId,
@@ -480,10 +489,9 @@ contract ChannelManager {
         string sigA, 
         string sigI
     ) 
-        public 
+        public
+        noReentrancy
     {
-        require(topLevel, "consensusCloseChannel: Top level function can only be called directly");
-
         Channel storage channel = channels[channelId];
 
         require(channel.status == ChannelStatus.Joined, "consensusCloseChannel: Channel status must be Joined");
@@ -532,17 +540,16 @@ contract ChannelManager {
         channel.balancesI[0] = 0; // wei
         channel.balancesI[1] = 0; // token
 
+        // transfer for partyA
         channel.partyA.transfer(balances[0]); // weiBalanceA
-        hubAddress.transfer(balances[1]); // weiBalanceI
-
         require(
             approvedToken.transfer(channel.partyA, balances[2]),
             "consensusCloseChannel: Token transfer failure"
         ); // tokenBalanceA
-        require(
-            approvedToken.transfer(hubAddress, balances[3]),
-            "consensusCloseChannel: Token transfer failure"
-        ); // tokenBalanceI
+
+        // unallocate funds for hub
+        totalBondedAmountWei = totalBondedAmountWei.sub(balances[1]); // weiBalanceI
+        totalBondedAmountToken = totalBondedAmountToken.sub(balances[3]); // tokenBalanceI
 
         emit DidChannelClose(
             channelId,
@@ -565,9 +572,8 @@ contract ChannelManager {
         string sigI
     ) 
         public
+        noReentrancy
     {
-        require(topLevel, "checkpointChannel: Top level function can only be called directly");
-
         Channel storage channel = channels[channelId];
         require(channel.status == ChannelStatus.Joined, "checkpointChannel: Channel status must be Joined or Settling");
         // require for all checkpoints
@@ -618,9 +624,7 @@ contract ChannelManager {
     }
 
     // BYZANTINE FUNCTIONS
-    function startChannelSettlement(bytes32 channelId) public {
-        require(topLevel, "startChannelSettlement: Top level function can only be called directly");
-
+    function startChannelSettlement(bytes32 channelId) public noReentrancy {
         Channel storage channel = channels[channelId];
 
         require(msg.sender == channel.partyA || msg.sender == hubAddress, "startChannelSettlement: Sender must be part of channel");
@@ -656,9 +660,8 @@ contract ChannelManager {
         string sigI
     ) 
         public
+        noReentrancy
     {
-        require(topLevel, "checkpointChannelDispute: Top level function can only be called directly");
-
         Channel storage channel = channels[channelId];
         require(channel.status == ChannelStatus.Settling, "checkpointChannel: Channel status must be Settling");
         require(now < channel.updateTimeout);
@@ -716,9 +719,9 @@ contract ChannelManager {
         uint256[2] balances, // [weiBalanceA, tokenBalanceA]
         string sigA
     ) 
-        public 
+        public
+        noReentrancy
     {
-        require(topLevel, "initThread: Top level function can only be called directly");
         require(msg.sender == partyA || msg.sender == partyB || msg.sender == hubAddress, "initThread: Sender must be part of thread");
         require(channels[channelId].status == ChannelStatus.Settling, "initThread: Channel status must be Settling");
         require(threads[threadId].status == ThreadStatus.Nonexistent, "initThread: Thread exists");
@@ -778,10 +781,9 @@ contract ChannelManager {
         uint256[4] balances, // [weiBalanceA, weiBalanceI, tokenBalanceA, tokenBalanceI]
         string sigA
     ) 
-        public 
+        public
+        noReentrancy
     {
-        require(topLevel, "settleThread: Top level function can only be called directly");
-
         Thread storage thread = threads[threadId];
 
         require(
@@ -847,9 +849,7 @@ contract ChannelManager {
         );
     }
 
-    function closeThread(bytes32 channelId, bytes32 threadId) public {
-        require(topLevel, "closeThread: Top level function can only be called directly");
-
+    function closeThread(bytes32 channelId, bytes32 threadId) public noReentrancy {
         Channel storage channel = channels[channelId];
         Thread storage thread = threads[threadId];
 
@@ -895,9 +895,7 @@ contract ChannelManager {
     }
 
     // TODO: allow either LC end-user to nullify the settled LC state and return to off-chain
-    function byzantineCloseChannel(bytes32 channelId) public {
-        require(topLevel, "byzantineCloseChannel: Top level function can only be called directly");
-
+    function byzantineCloseChannel(bytes32 channelId) public noReentrancy {
         Channel storage channel = channels[channelId];
 
         // check settlement flag
@@ -918,17 +916,16 @@ contract ChannelManager {
         channel.balancesI[0] = 0;
         channel.balancesI[1] = 0;
 
+        // transfer for partyA
         channel.partyA.transfer(weibalanceA);
-        hubAddress.transfer(weibalanceI);
-
         require(
             approvedToken.transfer(channel.partyA, tokenbalanceA),
-            "byzantineCloseChannel: token transfer failure"
+            "byzantineCloseChannel: Token transfer failure"
         );
-        require(
-            approvedToken.transfer(hubAddress, tokenbalanceI),
-            "byzantineCloseChannel: token transfer failure"
-        );
+
+        // unallocate funds for hub
+        totalBondedAmountWei = totalBondedAmountWei.sub(channel.balancesI[0]);
+        totalBondedAmountToken = totalBondedAmountToken.sub(channel.balancesI[1]);
 
         emit DidChannelClose(
             channelId,
@@ -937,6 +934,23 @@ contract ChannelManager {
             weibalanceI,
             tokenbalanceA,
             tokenbalanceI
+        );
+    }
+
+    function hubWithdrawFunds(uint256 weiAmount, uint256 tokenAmount) public noReentrancy onlyHub {
+        require(
+            _getUnallocatedHubFundsWei() > weiAmount,
+            "hubWithdrawFunds: Contract wei funds not sufficient to create channel"
+        );
+        require(
+            _getUnallocatedHubFundsToken() > tokenAmount,
+            "hubWithdrawFunds: Contract token funds not sufficient to create channel"
+        );
+
+        hubAddress.transfer(weiAmount);
+        require(
+            approvedToken.transfer(hubAddress, tokenAmount),
+            "hubWithdrawFunds: Token transfer failure"
         );
     }
 
