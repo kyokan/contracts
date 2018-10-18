@@ -11,7 +11,19 @@ import "./lib/SafeMath.sol";
 TODO:
 - remove channel id and use partyA as id
 - on close, move to nonexistent and ensure that everything is zero-ed out (ALL CHANNEL STATE)
+  - Need to persist nonce through closes to protect replay attack
 - combine init and settle thread into one function in a separate version
+- use single hardcoded challenge period
+- move threads into channels into a mapping keyed by recipient
+- hub open account
+- use contract address in opening sig
+- deposit allow concurrent deposit, add expiry
+- each person only has 1 shot to challenge
+- init multiple threads at once
+- HST -> ERC20
+- broken consensus close, if you deposit/checkpoint with open threads
+  - fix by keeping track of total eth/token
+- SUPER CHECKPOINT: authorizedUpdate combines userOpen, deposit, withdraw, close
  */
 
 contract ChannelManager {
@@ -236,7 +248,7 @@ contract ChannelManager {
 
         // add to running total of bonded amount
         totalBondedAmountWei = totalBondedAmountWei.add(channel.balancesI[0]);
-        totalBondedAmountToken = totalBondedAmountToken.add(channel.balancesI[0]);
+        totalBondedAmountToken = totalBondedAmountToken.add(channel.balancesI[1]);
 
         require(
             approvedToken.transferFrom(msg.sender, this, tokenBalanceA),
@@ -254,6 +266,7 @@ contract ChannelManager {
 
     // deposit can be called be either party to add balance to the channel. this requires a double signed message
     // containing the deposit amount as a pending deposit.
+    // TODO need to add current balances
     function deposit(
         bytes32 channelId,
         uint256 weiDeposit, // needs to be specified because if it's hub it won't be transferred
