@@ -39,7 +39,7 @@ sequenceDiagram
     Payor->>Hub: Open thread
     Note over Payor,Hub: { ...channel A state..., sigA: 0xc3f }
 
-    Hub-->Hub: Wait for second update
+    Hub-->Hub: Wait for performer confirmation
 
     Provider->>Hub: Open thread
     Note over Provider,Hub: { ...channel B state..., sigA: 0xc3f }
