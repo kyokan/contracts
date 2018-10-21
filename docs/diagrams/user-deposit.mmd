@@ -12,7 +12,7 @@ sequenceDiagram
     opt Request Deposit Approval
         User->>Hub: /channel/:address/userDeposit
 
-        Note over User,Hub: <br> State: <br> { pendingDepositWei: [0, 100], <br> weiBalances: [0, 0], <br> tokenBalances: [0, 0] <br> txCount: [1, 1], <br> timeout: 156700391 }
+        Note over User,Hub: <br> State: <br> { pendingDepositWei: [0, 100] //[hub, user], <br> weiBalances: [0, 0], <br> tokenBalances: [0, 0] <br> txCount: [1, 1], <br> timeout: 156700391 }
     end
 
     Note over Hub: Should deposit <br> tokens for exchange?

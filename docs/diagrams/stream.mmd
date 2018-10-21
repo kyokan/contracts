@@ -34,7 +34,7 @@ sequenceDiagram
     Hub->>Provider: Go for it!
 
     Payor->>Provider: "I want to join your show"
-    Note over Payor,Provider: <br> Initial Deposit: <br> { weiBalances: [0, 10], <br> tokenBalances: [10, 0] <br> txCount: 0,  <br> sigA: 0xce2 }
+    Note over Payor,Provider: <br> Initial Deposit: <br> { weiBalances: [0, 10] //[hub, user], <br> tokenBalances: [10, 0] <br> txCount: 0,  <br> sigA: 0xce2 }
 
     Payor->>Hub: Open thread
     Note over Payor,Hub: { ...channel A state..., sigA: 0xc3f }
