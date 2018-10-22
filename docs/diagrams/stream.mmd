@@ -11,10 +11,14 @@ sequenceDiagram
 
     opt Collateralize channel on Start
         Hub->>Performer: Propose deposit
-        Note over Hub,Performer: { ...state w/pendingDeposits..., <br> sigI }
+        Note over Hub,Performer: { ...state w/pendingDeposits... }
 
-        Performer->>Hub: Verify and Cosign
-        Note over Hub,Performer: { ...state w/pendingDeposits..., <br> sigI, <br> sigA }
+        Performer->>Hub: Verify and sign
+        Note over Hub,Performer: { ...state w/pendingDeposits..., <br> sigA }
+
+        Hub->>Hub: Verify, cosign
+        Note over Hub: { ...state w/pendingDeposits..., <br> sigA, <br> sigI }
+        
 
         Hub->>Contract: hubAuthorizedStateUpdate
         Note over Contract: Confirmed!
