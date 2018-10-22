@@ -18,7 +18,7 @@ contract ChannelManager {
     uint256 public totalChannelWei;
     uint256 public totalChannelToken;
 
-    enum ChannelStatus {
+    enum Status {
        Open,
        ChannelDispute,
        ThreadDispute
