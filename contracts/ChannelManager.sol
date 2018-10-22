@@ -18,7 +18,7 @@ contract ChannelManager {
     uint256 public totalChannelWei;
     uint256 public totalChannelToken;
 
-    enum Status {
+    enum ChannelStatus {
        Open,
        ChannelDispute,
        ThreadDispute
@@ -33,7 +33,7 @@ contract ChannelManager {
         address exitInitiator;
         uint256 channelClosingTime;
         uint256 threadClosingTime;
-        Status status;
+        ChannelStatus status;
         mapping(address => mapping(address => Thread)) threads; // channels[user].threads[sender][receiver]
     }
 
@@ -107,7 +107,7 @@ contract ChannelManager {
         string sigUser
     ) public noReentrancy onlyHub {
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
+        require(channel.status == ChannelStatus.Open, "channel must be open");
 
         // Usage: exchange operations to protect user from exchange rate fluctuations
         require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
@@ -198,7 +198,7 @@ contract ChannelManager {
         require(msg.value == pendingWeiDeposits[1], "msg.value is not equal to pending user deposit");
 
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
+        require(channel.status == ChannelStatus.Open, "channel must be open");
 
         // Usage:
         // 1. exchange operations to protect hub from exchange rate fluctuations
@@ -285,13 +285,13 @@ contract ChannelManager {
         address user
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
+        require(channel.status == ChannelStatus.Open, "channel must be open");
 
         require(msg.sender == hub || msg.sender == user, "exit initiator must be user or hub");
 
         channel.exitInitiator = msg.sender;
         channel.channelClosingTime = now.add(challengePeriod);
-        channel.status = Status.ChannelDispute;
+        channel.status = ChannelStatus.ChannelDispute;
     }
 
     // start exit with offchain state
@@ -311,7 +311,7 @@ contract ChannelManager {
         string sigUser
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
+        require(channel.status == ChannelStatus.Open, "channel must be open");
 
         require(msg.sender == hub || msg.sender == user, "exit initiator must be user or hub");
 
@@ -374,7 +374,7 @@ contract ChannelManager {
 
         channel.exitInitiator = msg.sender;
         channel.channelClosingTime = now.add(challengePeriod);
-        channel.status == Status.ChannelDispute;
+        channel.status == ChannelStatus.ChannelDispute;
     }
 
     // party that didn't start exit can challenge and empty
@@ -394,7 +394,7 @@ contract ChannelManager {
         string sigUser
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ChannelDispute, "channel must be in dispute");
+        require(channel.status == ChannelStatus.ChannelDispute, "channel must be in dispute");
         require(now < channel.channelClosingTime, "channel closing time must not have passed");
 
         require(msg.sender != channel.exitInitiator, "challenger can not be exit initiator");
@@ -453,7 +453,7 @@ contract ChannelManager {
         channel.exitInitiator = address(0x0);
         channel.channelClosingTime = 0;
         channel.threadClosingTime = now.add(challengePeriod);
-        channel.status == Status.ThreadDispute;
+        channel.status == ChannelStatus.ThreadDispute;
     }
 
     // after timer expires - anyone can call
@@ -461,7 +461,7 @@ contract ChannelManager {
         address user
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ChannelDispute, "channel must be in dispute");
+        require(channel.status == ChannelStatus.ChannelDispute, "channel must be in dispute");
 
         require(channel.channelClosingTime < now, "channel closing time must have passed");
 
@@ -490,7 +490,7 @@ contract ChannelManager {
         channel.exitInitiator = address(0x0);
         channel.channelClosingTime = 0;
         channel.threadClosingTime = now.add(challengePeriod):
-        channel.status = Status.ThreadDispute;
+        channel.status = ChannelStatus.ThreadDispute;
     }
 
     // either party starts exit with initial state
