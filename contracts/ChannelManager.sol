@@ -494,26 +494,288 @@ contract ChannelManager {
     }
 
     // either party starts exit with initial state
-    function startExitThreads(
-        address[] user,
-        address[] sender,
-        address[] recipient,
-        uint256[] weiBalances, // [sender1, recipient1, sender2, recipient2] - double the length of other arrays
-        uint256[] tokenBalances, // [sender1, recipient1, sender2, recipient2] - double the length of other arrays
-        bytes proof, // TODO how to split up? Are all proofs fixed length?
-        string sig // TODO how to split up?
+    function startExitThread(
+        address user,
+        address sender,
+        address receiver,
+        uint256[2] weiBalances,
+        uint256[2] tokenBalances,
+        uint256 txCount,
+        bytes proof,
+        string sig
     ) public noReentrancy {
+        Channel storage channel = channels[user];
+        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
+        require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
+        require(msg.sender == hub || msg.sender == user, "thread exit initiator must be user or hub");
 
+        Thread storage thread = channel.threads[sender][receiver];
+        require(!thread.inDispute, "thread must not already be in dispute");
+        require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
+
+        // prepare state hash to check sender sig
+        bytes32 state = keccak256(
+            abi.encodePacked(
+                address(this),
+                user,
+                sender,
+                receiver,
+                weiBalances, // [hub, user]
+                tokenBalances, // [hub, user]
+                txCount // persisted onchain even when empty
+            )
+        );
+
+        // check receiver sig matches state hash
+        require(sender == ECTools.recoverSigner(state, sig));
+
+        // Check the initial thread state is in the threadRoot
+        require(_isContained(state, proof, channel.threadRoot) == true, "initial thread state is not contained in threadRoot");
+
+        thread.weiBalances = weiBalances;
+        thread.tokenBalances = tokenBalances;
+        thread.txCount = txCount;
+        thread.inDispute = true;
     }
 
     // either party starts exit with offchain state
-    function startExitThreadsWithUpdates() {}
+    function startExitThreadWithUpdate(
+        address user,
+        address sender,
+        address receiver,
+        uint256[2] weiBalances,
+        uint256[2] tokenBalances,
+        uint256 txCount,
+        bytes proof,
+        string sig,
+        uint256[2] updatedWeiBalances,
+        uint256[2] updatedTokenBalances,
+        uint256 updatedTxCount,
+        string updateSig
+    ) public noReentrancy {
+        Channel storage channel = channels[user];
+        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
+        require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
+        require(msg.sender == hub || msg.sender == user, "thread exit initiator must be user or hub");
 
-    // after timer expires, empty with onchain state
-    function emptyThreads() {}
+        Thread storage thread = channel.threads[sender][receiver];
+        require(!thread.inDispute, "thread must not already be in dispute");
+        require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
 
-    // recipient can empty anytime after initialization
-    function recipientEmptyThreads() {}
+        // prepare state hash to check sender sig
+        bytes32 state = keccak256(
+            abi.encodePacked(
+                address(this),
+                user,
+                sender,
+                receiver,
+                weiBalances, // [hub, user]
+                tokenBalances, // [hub, user]
+                txCount // persisted onchain even when empty
+            )
+        );
+
+        // check sender sig matches state hash
+        require(sender == ECTools.recoverSigner(state, sig));
+
+        // Check the initial thread state is in the threadRoot
+        require(_isContained(state, proof, channel.threadRoot) == true, "initial thread state is not contained in threadRoot");
+
+        // *********************
+        // PROCESS THREAD UPDATE
+        // *********************
+
+        require(updatedTxCount > txCount, "updated thread txCount must be higher than the initial thread txCount");
+        require(updatedWeiBalances[0].add(updatedWeiBalances[1]) == weiBalances[0].add(weiBalances[1]), "updated wei balances must match sum of initial wei balances");
+        require(updatedTokenBalances[0].add(updatedTokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
+
+        // prepare state update hash to check sender sig
+        bytes32 update = keccak256(
+            abi.encodePacked(
+                address(this),
+                user,
+                sender,
+                receiver,
+                updatedWeiBalances, // [hub, user]
+                updatedTokenBalances, // [hub, user]
+                updatedTxCount // persisted onchain even when empty
+            )
+        );
+
+        // check sender sig matches state update hash
+        require(sender == ECTools.recoverSigner(update, updateSig));
+
+        thread.weiBalances = updatedWeiBalances;
+        thread.tokenBalances = updatedTokenBalances;
+        thread.txCount = updatedTxCount;
+        thread.inDispute = true;
+    }
+
+    // non-sender can empty anytime with a state update after startExitThread/WithUpdate is called
+    function fastEmptyThread(
+        address user,
+        address sender,
+        address receiver,
+        uint256[2] weiBalances,
+        uint256[2] tokenBalances,
+        uint256 txCount,
+        bytes proof,
+        string sig
+    ) public noReentrancy {
+        Channel storage channel = channels[user];
+        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
+        require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
+        require((msg.sender == hub && sender == user) || (msg.sender == user && receiver == user), "only hub or user, as the non-sender, can call this function");
+
+        Thread storage thread = channel.threads[sender][receiver];
+        require(thread.inDispute, "thread must be in dispute");
+
+        // assumes that the non-sender has a later thread state than what was being proposed when the thread exit started
+        require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
+        require(weiBalances[0].add(weiBalances[1]) == thread.weiBalances[0].add(thread.weiBalances[1]), "updated wei balances must match sum of thread wei balances");
+        require(tokenBalances[0].add(tokenBalances[1]) == thread.tokenBalances[0].add(thread.tokenBalances[1]), "updated token balances must match sum of thread token balances");
+
+        // prepare state hash to check sender sig
+        bytes32 state = keccak256(
+            abi.encodePacked(
+                address(this),
+                user,
+                sender,
+                receiver,
+                weiBalances, // [hub, user]
+                tokenBalances, // [hub, user]
+                txCount // persisted onchain even when empty
+            )
+        );
+
+        // check sender sig matches state hash
+        require(sender == ECTools.recoverSigner(state, sig));
+
+        // deduct hub/user wei/tokens about to be emptied from the thread from the total channel balances
+        channel.weiBalances[2] = channel.weiBalances[2].sub(weiBalances[0]).sub(weiBalances[1]);
+        channel.tokenBalances[2] = channel.tokenBalances[2].sub(tokenBalances[0]).sub(tokenBalances[1]);
+
+        // transfer hub thread wei balance from channel to reserves
+        totalChannelWei = totalChannelWei.sub(weiBalances[0]);
+        thread.weiBalances[0] = 0;
+
+        // transfer user thread wei balance to user
+        totalChannelWei = totalChannelWei.sub(weiBalances[1]);
+        user.transfer(weiBalances[1]);
+        thread.weiBalances[1] = 0;
+
+        // transfer hub thread token balance from channel to reserves
+        totalChannelTokens = totalChannelToken.sub(tokenBalances[0]);
+        thread.tokenBalances[0] = 0;
+
+        // transfer user thread token balance to user
+        totalChannelTokens = totalChannelToken.sub(tokenBalances[1]);
+        require(approvedToken.transfer(user, tokenBalances[1]), "user token withdrawal transfer failed");
+        thread.tokenBalances[1] = 0;
+
+        thread.txCount = txCount;
+        thread.inDispute = false;
+
+        // decrement the channel threadCount
+        channel.threadCount = channel.threadCount.sub(1);
+
+        // if this is the last thread being emptied, re-open the channel
+        if (channel.threadCount == 0) {
+            channel.threadRoot = bytes32(0x0);
+            channel.threadClosingTime = 0;
+            channel.status = Status.Open;
+        }
+    }
+
+    // after timer expires, anyone can empty with onchain state
+    function emptyThread(
+        address user,
+        address sender,
+        address receiver
+    ) public noReentrancy {
+        Channel storage channel = channels[user];
+        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute");
+        require(channel.threadClosingTime < now, "thread closing time must have passed");
+
+        Thread storage thread = channel.threads[sender][receiver];
+        require(thread.inDispute, "thread must be in dispute");
+
+        // deduct hub/user wei/tokens about to be emptied from the thread from the total channel balances
+        channel.weiBalances[2] = channel.weiBalances[2].sub(thread.weiBalances[0]).sub(thread.weiBalances[1]);
+        channel.tokenBalances[2] = channel.tokenBalances[2].sub(thread.tokenBalances[0]).sub(thread.tokenBalances[1]);
+
+        // transfer hub thread wei balance from channel to reserves
+        totalChannelWei = totalChannelWei.sub(thread.weiBalances[0]);
+        thread.weiBalances[0] = 0;
+
+        // transfer user thread wei balance to user
+        totalChannelWei = totalChannelWei.sub(thread.weiBalances[1]);
+        user.transfer(thread.weiBalances[1]);
+        thread.weiBalances[1] = 0;
+
+        // transfer hub thread token balance from channel to reserves
+        totalChannelTokens = totalChannelToken.sub(thread.tokenBalances[0]);
+        thread.tokenBalances[0] = 0;
+
+        // transfer user thread token balance to user
+        totalChannelTokens = totalChannelToken.sub(thread.tokenBalances[1]);
+        require(approvedToken.transfer(user, thread.tokenBalances[1]), "user token withdrawal transfer failed");
+        thread.tokenBalances[1] = 0;
+
+        thread.txCount = updatedTxCount;
+        thread.inDispute = false;
+
+        // decrement the channel threadCount
+        channel.threadCount = channel.threadCount.sub(1);
+
+        // if this is the last thread being emptied, re-open the channel
+        if (channel.threadCount == 0) {
+            channel.threadRoot = bytes32(0x0);
+            channel.threadClosingTime = 0;
+            channel.status = Status.Open;
+        }
+    }
 
     // anyone can call to re-open an account stuck in threadDispute after 10x challengePeriods
-    function nukeThreads() {}
+    function nukeThreads(
+        address user
+    ) public noReentrancy {
+        Channel storage channel = channels[user];
+        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute");
+        require(channel.threadClosingTime.add(challengePeriod.mul(10)) < now, "thread closing time must have passed by 10 challenge periods");
+
+        // transfer any remaining channel wei to user
+        totalChannelWei = totalChannelWei.sub(channel.weiBalances[2]);
+        user.transfer(channel.weiBalances[2]);
+        channel.weiBalances[2] = 0;
+
+        // transfer any remaining channel tokens to user
+        totalChannelTokens = totalChannelToken.sub(channel.tokenBalances[2]);
+        require(approvedToken.transfer(user, channel.tokenBalances[2]), "user token withdrawal transfer failed");
+        channel.tokenBalances[2] = 0;
+
+        // reset channel params
+        channel.threadCount = 0;
+        channel.threadRoot = bytes32(0x0);
+        channel.threadClosingTime = 0;
+        channel.status = Status.Open;
+
+        // TODO need to think about resetting thread state based on nukeThreads
+    }
+
+    function _isContained(bytes32 _hash, bytes _proof, bytes32 _root) internal pure returns (bool) {
+        bytes32 cursor = _hash;
+        bytes32 proofElem;
+
+        for (uint256 i = 64; i <= _proof.length; i += 32) {
+            assembly { proofElem := mload(add(_proof, i)) }
+
+            if (cursor < proofElem) {
+                cursor = keccak256(abi.encodePacked(cursor, proofElem));
+            } else {
+                cursor = keccak256(abi.encodePacked(proofElem, cursor));
+            }
+        }
+
+        return cursor == _root;
+    }
