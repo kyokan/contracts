@@ -30,20 +30,14 @@ contract ChannelManager {
     // balance).
     event DidUpdateChannel (
         indexed address user,
-        // TODO: Which of these options is better?
-        uint256 sender,    // Feels most "complete"
-        bool senderIsHub,  // Feels most "obvious"
-        uint256 senderIdx, // Fits best with the pattern below; I think the one I'm voting for?
+        uint256 senderIdx,
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
         uint256[2] pendingWeiDeposits,
         uint256[2] pendingTokenDeposits,
         uint256[2] pendingWeiWithdrawals,
         uint256[2] pendingTokenWithdrawals,
-        uint256[2] txCount,
-        bytes32 threadRoot,  // TODO: Is there value in including the thread* values?
-        uint256 threadCount, //       Is there any meaningful harm in including them?
-        uint256 timeout
+        uint256[2] txCount
     );
 
     // Note: unlike the DidUpdateChannel event, the ``DidStartExitChannel``
@@ -51,30 +45,65 @@ contract ChannelManager {
     // applied as part of startExitWithUpdate.
     event DidStartExitChannel (
         indexed address user,
-        // TODO: Use the same name as in DidUpdateChannel, above
-        uint256 sender,    // Feels most "complete"
-        bool senderIsHub,  // Feels most "obvious"
-        uint256 senderIdx, // Fits best with the pattern below; I think the one I'm voting for?
+        uint256 senderIdx,
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
         uint256[2] txCount,
-        bytes32 threadRoot, // TODO: Is there value in including the thread* values?
-        uint256 threadCount //       Is there any meaningful harm in including them?
+        bytes32 threadRoot,
+        uint256 threadCount
     );
 
     // Note: like DidStartExitChannel, the payload contains thechannel state after
     // any update has been applied.
     event DidEmptyChannel (
         indexed address user,
-        // TODO: Use the same name as in DidUpdateChannel, above
-        uint256 sender,    // Feels most "complete"
-        bool senderIsHub,  // Feels most "obvious"
-        uint256 senderIdx, // Fits best with the pattern below; I think the one I'm voting for?
+        uint256 senderIdx,
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
         uint256[2] txCount,
-        bytes32 threadRoot, // TODO: Is there value in including the thread* values?
-        uint256 threadCount //       Is there any meaningful harm in including them?
+        bytes32 threadRoot,
+        uint256 threadCount
+    );
+
+    event DidStartExitThread (
+        indexed address user,
+        address sender,
+        address receiver,
+        uint256 senderIdx,
+        uint256[2] weiBalances,
+        uint256[2] tokenBalances,
+        uint256 txCount
+    );
+
+    event DidEmptyThread (
+        indexed address user,
+        address sender,
+        address receiver,
+        uint256 senderIdx,
+
+        // TODO: is there any reason to include the thread's balance before the
+        // close?
+
+        uint256[2] channelWeiBalances,
+        uint256[2] channelTokenBalances,
+        uint256[2] channelTxCount,
+        bytes32 channelThreadRoot,
+        uint256 channelThreadCount
+    );
+
+    event DidNukeThreads(
+        indexed address user,
+        address senderAddress,
+
+        // TODO: it seems like it could be interesting (or, at very least,
+        // helpful with debugging) to include the old thread count and the
+        // old thread balances here.
+
+        uint256[2] channelWeiBalances,
+        uint256[2] channelTokenBalances,
+        uint256[2] channelTxCount,
+        bytes32 channelThreadRoot,
+        uint256 channelThreadCount
     );
 
     enum Status {
@@ -683,6 +712,16 @@ contract ChannelManager {
         thread.tokenBalances = tokenBalances;
         thread.txCount = txCount;
         thread.inDispute = true;
+
+        emit DidStartExitThread(
+            user,
+            sender,
+            receiver,
+            msg.sender == hub ? 0 : 1,
+            thread.weiBalances,
+            thread.tokenBalances,
+            thread.txCount
+        );
     }
 
     // either party starts exit with offchain state
@@ -756,6 +795,16 @@ contract ChannelManager {
         thread.tokenBalances = updatedTokenBalances;
         thread.txCount = updatedTxCount;
         thread.inDispute = true;
+
+        emit DidStartExitThread(
+            user,
+            sender,
+            receiver,
+            msg.sender == hub ? 0 : 1,
+            thread.weiBalances,
+            thread.tokenBalances,
+            thread.txCount
+        );
     }
 
     // non-sender can empty anytime with a state update after startExitThread/WithUpdate is called
@@ -832,6 +881,18 @@ contract ChannelManager {
             channel.threadClosingTime = 0;
             channel.status = Status.Open;
         }
+
+        emit DidEmptyThread(
+            user,
+            sender,
+            receiver,
+            msg.sender == hub ? 0 : 1,
+            [channel.weiBalances[0], channel.weiBalances[1]],
+            [channel.tokenBalances[0], channel.tokenBalances[1]],
+            channel.txCount,
+            channel.threadRoot,
+            channel.threadCount
+        );
     }
 
     // after timer expires, anyone can empty with onchain state
@@ -881,6 +942,18 @@ contract ChannelManager {
             channel.threadClosingTime = 0;
             channel.status = Status.Open;
         }
+
+        emit DidEmptyThread(
+            user,
+            sender,
+            receiver,
+            msg.sender == hub ? 0 : 1,
+            [channel.weiBalances[0], channel.weiBalances[1]],
+            [channel.tokenBalances[0], channel.tokenBalances[1]],
+            channel.txCount,
+            channel.threadRoot,
+            channel.threadCount
+        );
     }
 
     // anyone can call to re-open an account stuck in threadDispute after 10x challengePeriods
@@ -908,6 +981,16 @@ contract ChannelManager {
         channel.status = Status.Open;
 
         // TODO need to think about resetting thread state based on nukeThreads
+
+        emit DidNukeThreads(
+            user,
+            msg.sender,
+            [channel.weiBalances[0], channel.weiBalances[1]],
+            [channel.tokenBalances[0], channel.tokenBalances[1]],
+            channel.txCount,
+            channel.threadRoot,
+            channel.threadCount
+        );
     }
 
     function _isContained(bytes32 _hash, bytes _proof, bytes32 _root) internal pure returns (bool) {
