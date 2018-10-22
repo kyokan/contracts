@@ -515,5 +515,5 @@ contract ChannelManager {
     // recipient can empty anytime after initialization
     function recipientEmptyThreads() {}
 
-    // anyone can call to re-open an accont stuck in threadDispute after 10x challengePeriods
+    // anyone can call to re-open an account stuck in threadDispute after 10x challengePeriods
     function nukeThreads() {}
