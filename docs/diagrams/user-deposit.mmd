@@ -22,12 +22,12 @@ sequenceDiagram
 
         # what happens to the txCount if the hub deposits here?
 
-        Note over User,Hub: <br> State: <br> { pendingDepositWei: [0, 100], <br> pendingDepositTokens: [69, 0], <br> weiBalances: [0, 0], <br> tokenBalances: [0, 0], <br> txCount: [1, 1], <br> timeout: 156700391 }
+        Note over User,Hub: <br> State: <br> { pendingDepositWei: [0, 100], <br> pendingDepositTokens: [69, 0], <br> weiBalances: [0, 0], <br> tokenBalances: [0, 0], <br> txCount: [1, 1], <br> timeout: 156700391, <br>sigI: 0xac3f }
 
     else Doesn't Deposit
         Hub->>User: 
 
-        Note over User,Hub: <br> State: <br> { pendingDepositWei: [0, 100], <br> pendingDepositTokens: [0, 0], <br> weiBalances: [0, 0], <br> tokenBalances: [0, 0] <br> txCount: [1, 1], <br> timeout: 156700391, sigI: 0xac3f }
+        Note over User,Hub: <br> State: <br> { pendingDepositWei: [0, 100], <br> pendingDepositTokens: [0, 0], <br> weiBalances: [0, 0], <br> tokenBalances: [0, 0] <br> txCount: [1, 1], <br> timeout: 156700391, <br>sigI: 0xac3f }
 
     end
 
@@ -43,7 +43,7 @@ sequenceDiagram
         User->>Contract: userAuthorizedStateUpdate
 
     else User does not submit state
-        Note over Hub: Timer expires <br> State is invalid from <br> timeout expiry.
+        Note over Hub: Timer expires <br> State is invalid from <br> timeout expiry. Next <br> state will have same <br> txCount.
     end
 
     Note over Contract: Deposit confirmed!
