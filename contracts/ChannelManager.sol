@@ -26,20 +26,20 @@ contract ChannelManager {
 
     struct Channel {
         uint256[3] weiBalances; // [hub, user, total]
-        uint256[3] tokenBalances // [hub, user, total]
+        uint256[3] tokenBalances; // [hub, user, total]
         uint256[2] txCount; // persisted onchain even when empty [global, onchain]
         bytes32 threadRoot;
         uint256 threadCount;
         address exitInitiator;
         uint256 channelClosingTime;
         uint256 threadClosingTime;
-        Status status;
+        ChannelStatus status;
         mapping(address => mapping(address => Thread)) threads; // channels[user].threads[sender][receiver]
     }
 
     struct Thread {
         uint256[2] weiBalances; // [hub, user]
-        uint256[2] tokenBalances // [hub, user]
+        uint256[2] tokenBalances; // [hub, user]
         uint256 txCount; // persisted onchain even when empty
         bool inDispute; // needed so we don't close threads twice
     }
@@ -88,7 +88,7 @@ contract ChannelManager {
     }
 
     function getHubReserveTokens() public view returns (uint256) {
-        return approvedToken.balanceOf(address(this)).sub(totalChannelTokens);
+        return approvedToken.balanceOf(address(this)).sub(totalChannelToken);
     }
 
     function hubAuthorizedUpdate(
@@ -107,7 +107,7 @@ contract ChannelManager {
         string sigUser
     ) public noReentrancy onlyHub {
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
+        require(channel.status == ChannelStatus.Open, "channel must be open");
 
         // Usage: exchange operations to protect user from exchange rate fluctuations
         require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
@@ -170,8 +170,8 @@ contract ChannelManager {
         require(approvedToken.transfer(recipient, pendingTokenWithdrawals[1]), "user token withdrawal transfer failed");
 
         // update channel total balances
-        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiDeposit[0]).add(pendingWeiDeposit[1]).sub(pendingWeiWithdrawals[0]).sub(pendingWeiWithdrawals[1]);
-        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenDeposit[0]).add(pendingTokenDeposit[1]).sub(pendingTokenWithdrawals[0]).sub(pendingTokenWithdrawals[1]);
+        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiDeposits[0]).add(pendingWeiDeposits[1]).sub(pendingWeiWithdrawals[0]).sub(pendingWeiWithdrawals[1]);
+        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenDeposits[0]).add(pendingTokenDeposits[1]).sub(pendingTokenWithdrawals[0]).sub(pendingTokenWithdrawals[1]);
 
         // update state variables
         channel.txCount = txCount;
@@ -198,12 +198,12 @@ contract ChannelManager {
         require(msg.value == pendingWeiDeposits[1], "msg.value is not equal to pending user deposit");
 
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
+        require(channel.status == ChannelStatus.Open, "channel must be open");
 
         // Usage:
         // 1. exchange operations to protect hub from exchange rate fluctuations
         // 2. protect hub against user failing to send the transaction in a timely manner
-        require(timeout || now < timeout, "the timeout must be zero or not have passed");
+        require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
 
         // prepare state hash to check hub sig
         bytes32 state = keccak256(
@@ -237,7 +237,7 @@ contract ChannelManager {
 
         // hub has enough reserves for wei/token deposits
         require(pendingWeiDeposits[0] <= getHubReserveWei(), "insufficient reserve wei for deposits");
-        require(pendingTokenDeposits[0]) <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
+        require(pendingTokenDeposits[0] <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
 
         // transfer user token deposit to this contract
         require(approvedToken.transferFrom(msg.sender, address(this), pendingTokenDeposits[1]), "user token deposit failed");
@@ -267,8 +267,8 @@ contract ChannelManager {
         require(approvedToken.transfer(recipient, pendingTokenWithdrawals[1]), "user token withdrawal transfer failed");
 
         // update channel total balances
-        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiDeposit[0]).add(pendingWeiDeposit[1]).sub(pendingWeiWithdrawals[0]).sub(pendingWeiWithdrawals[1]);
-        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenDeposit[0]).add(pendingTokenDeposit[1]).sub(pendingTokenWithdrawals[0]).sub(pendingTokenWithdrawals[1]);
+        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiDeposits[0]).add(pendingWeiDeposits[1]).sub(pendingWeiWithdrawals[0]).sub(pendingWeiWithdrawals[1]);
+        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenDeposits[0]).add(pendingTokenDeposits[1]).sub(pendingTokenWithdrawals[0]).sub(pendingTokenWithdrawals[1]);
 
         // update state variables
         channel.txCount = txCount;
@@ -285,13 +285,13 @@ contract ChannelManager {
         address user
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
+        require(channel.status == ChannelStatus.Open, "channel must be open");
 
         require(msg.sender == hub || msg.sender == user, "exit initiator must be user or hub");
 
         channel.exitInitiator = msg.sender;
         channel.channelClosingTime = now.add(challengePeriod);
-        channel.status = Status.ChannelDispute;
+        channel.status = ChannelStatus.ChannelDispute;
     }
 
     // start exit with offchain state
@@ -311,7 +311,7 @@ contract ChannelManager {
         string sigUser
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
+        require(channel.status == ChannelStatus.Open, "channel must be open");
 
         require(msg.sender == hub || msg.sender == user, "exit initiator must be user or hub");
 
@@ -374,7 +374,7 @@ contract ChannelManager {
 
         channel.exitInitiator = msg.sender;
         channel.channelClosingTime = now.add(challengePeriod);
-        channel.status == Status.ChannelDispute;
+        channel.status == ChannelStatus.ChannelDispute;
     }
 
     // party that didn't start exit can challenge and empty
@@ -394,7 +394,7 @@ contract ChannelManager {
         string sigUser
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ChannelDispute, "channel must be in dispute");
+        require(channel.status == ChannelStatus.ChannelDispute, "channel must be in dispute");
         require(now < channel.channelClosingTime, "channel closing time must not have passed");
 
         require(msg.sender != channel.exitInitiator, "challenger can not be exit initiator");
@@ -453,7 +453,7 @@ contract ChannelManager {
         channel.exitInitiator = address(0x0);
         channel.channelClosingTime = 0;
         channel.threadClosingTime = now.add(challengePeriod);
-        channel.status == Status.ThreadDispute;
+        channel.status == ChannelStatus.ThreadDispute;
     }
 
     // after timer expires - anyone can call
@@ -461,7 +461,7 @@ contract ChannelManager {
         address user
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ChannelDispute, "channel must be in dispute");
+        require(channel.status == ChannelStatus.ChannelDispute, "channel must be in dispute");
 
         require(channel.channelClosingTime < now, "channel closing time must have passed");
 
@@ -479,18 +479,18 @@ contract ChannelManager {
         channel.weiBalances[1] = 0;
 
         // transfer hub token balance from channel to reserves
-        totalChannelTokens = totalChannelToken.sub(channel.tokenBalances[0]);
+        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[0]);
         channel.tokenBalances[0] = 0;
 
         // transfer user token balance to user
-        totalChannelTokens = totalChannelToken.sub(channel.tokenBalances[1]);
+        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[1]);
         require(approvedToken.transfer(user, channel.tokenBalances[1]), "user token withdrawal transfer failed");
         channel.tokenBalances[1] = 0;
 
         channel.exitInitiator = address(0x0);
         channel.channelClosingTime = 0;
-        channel.threadClosingTime = now.add(challengePeriod):
-        channel.status = Status.ThreadDispute;
+        channel.threadClosingTime = now.add(challengePeriod);
+        channel.status = ChannelStatus.ThreadDispute;
     }
 
     // either party starts exit with initial state
@@ -505,7 +505,7 @@ contract ChannelManager {
         string sig
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
+        require(channel.status == ChannelStatus.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
         require(msg.sender == hub || msg.sender == user, "thread exit initiator must be user or hub");
 
@@ -554,7 +554,7 @@ contract ChannelManager {
         string updateSig
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
+        require(channel.status == ChannelStatus.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
         require(msg.sender == hub || msg.sender == user, "thread exit initiator must be user or hub");
 
@@ -585,7 +585,7 @@ contract ChannelManager {
         // PROCESS THREAD UPDATE
         // *********************
 
-        require(updatedTxCountxCount > txCount, "updated thread txCount must be higher than the initial thread txCount");
+        require(updatedTxCount > txCount, "updated thread txCount must be higher than the initial thread txCount");
         require(updatedWeiBalances[0].add(updatedWeiBalances[1]) == weiBalances[0].add(weiBalances[1]), "updated wei balances must match sum of initial wei balances");
         require(updatedTokenBalances[0].add(updatedTokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
@@ -623,7 +623,7 @@ contract ChannelManager {
         string sig
     ) {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
+        require(channel.status == ChannelStatus.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
         require((msg.sender == hub && sender == user) || (msg.sender == user && receiver == user), "only hub or user, as the non-sender, can call this function");
 
@@ -664,15 +664,15 @@ contract ChannelManager {
         thread.weiBalances[1] = 0;
 
         // transfer hub thread token balance from channel to reserves
-        totalChannelTokens = totalChannelToken.sub(tokenBalances[0]);
+        totalChannelToken = totalChannelToken.sub(tokenBalances[0]);
         thread.tokenBalances[0] = 0;
 
         // transfer user thread token balance to user
-        totalChannelTokens = totalChannelToken.sub(tokenBalances[1]);
+        totalChannelToken = totalChannelToken.sub(tokenBalances[1]);
         require(approvedToken.transfer(user, tokenBalances[1]), "user token withdrawal transfer failed");
         thread.tokenBalances[1] = 0;
 
-        thread.txCount = updatedTxCount;
+        thread.txCount = txCount;
         thread.inDispute = false;
 
         // decrement the channel threadCount
@@ -682,7 +682,7 @@ contract ChannelManager {
         if (channel.threadCount == 0) {
             channel.threadRoot = bytes32(0x0);
             channel.threadClosingTime = 0;
-            channel.status = Status.Open;
+            channel.status = ChannelStatus.Open;
         }
     }
 
@@ -690,10 +690,11 @@ contract ChannelManager {
     function emptyThread(
         address user,
         address sender,
-        address receiver
+        address receiver,
+        uint256 txCount
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute");
+        require(channel.status == ChannelStatus.ThreadDispute, "channel must be in thread dispute");
         require(channel.threadClosingTime < now, "thread closing time must have passed");
 
         Thread storage thread = channel.threads[sender][receiver];
@@ -713,15 +714,15 @@ contract ChannelManager {
         thread.weiBalances[1] = 0;
 
         // transfer hub thread token balance from channel to reserves
-        totalChannelTokens = totalChannelToken.sub(thread.tokenBalances[0]);
+        totalChannelToken = totalChannelToken.sub(thread.tokenBalances[0]);
         thread.tokenBalances[0] = 0;
 
         // transfer user thread token balance to user
-        totalChannelTokens = totalChannelToken.sub(thread.tokenBalances[1]);
+        totalChannelToken = totalChannelToken.sub(thread.tokenBalances[1]);
         require(approvedToken.transfer(user, thread.tokenBalances[1]), "user token withdrawal transfer failed");
         thread.tokenBalances[1] = 0;
 
-        thread.txCount = updatedTxCount;
+        thread.txCount = txCount;
         thread.inDispute = false;
 
         // decrement the channel threadCount
@@ -731,7 +732,7 @@ contract ChannelManager {
         if (channel.threadCount == 0) {
             channel.threadRoot = bytes32(0x0);
             channel.threadClosingTime = 0;
-            channel.status = Status.Open;
+            channel.status = ChannelStatus.Open;
         }
     }
 
@@ -740,7 +741,7 @@ contract ChannelManager {
         address user
     ) public noReentrancy {
         Channel storage channel = channels[user];
-        require(channel.status == Status.ThreadDispute, "channel must be in thread dispute");
+        require(channel.status == ChannelStatus.ThreadDispute, "channel must be in thread dispute");
         require(channel.threadClosingTime.add(challengePeriod.mul(10)) < now, "thread closing time must have passed by 10 challenge periods");
 
         // transfer any remaining channel wei to user
@@ -749,7 +750,7 @@ contract ChannelManager {
         channel.weiBalances[2] = 0;
 
         // transfer any remaining channel tokens to user
-        totalChannelTokens = totalChannelToken.sub(channel.tokenBalances[2]);
+        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[2]);
         require(approvedToken.transfer(user, channel.tokenBalances[2]), "user token withdrawal transfer failed");
         channel.tokenBalances[2] = 0;
 
@@ -757,7 +758,7 @@ contract ChannelManager {
         channel.threadCount = 0;
         channel.threadRoot = bytes32(0x0);
         channel.threadClosingTime = 0;
-        channel.status = Status.Open;
+        channel.status = ChannelStatus.Open;
     }
 
     function _isContained(bytes32 _hash, bytes _proof, bytes32 _root) internal pure returns (bool) {
@@ -776,3 +777,4 @@ contract ChannelManager {
 
         return cursor == _root;
     }
+}
