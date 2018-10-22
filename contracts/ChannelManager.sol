@@ -513,7 +513,7 @@ contract ChannelManager {
         require(!thread.inDispute, "thread must not already be in dispute");
         require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
 
-        // prepare state hash to check hub sig
+        // prepare state hash to check sender sig
         bytes32 state = keccak256(
             abi.encodePacked(
                 address(this),
@@ -527,7 +527,7 @@ contract ChannelManager {
         );
 
         // check receiver sig matches state hash
-        require(receiver == ECTools.recoverSigner(state, sig));
+        require(sender == ECTools.recoverSigner(state, sig));
 
         // Check the initial thread state is in the threadRoot
         require(_isContained(state, proof, channel.threadRoot) == true, "initial thread state is not contained in threadRoot");
@@ -562,7 +562,7 @@ contract ChannelManager {
         require(!thread.inDispute, "thread must not already be in dispute");
         require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
 
-        // prepare state hash to check hub sig
+        // prepare state hash to check sender sig
         bytes32 state = keccak256(
             abi.encodePacked(
                 address(this),
@@ -575,8 +575,8 @@ contract ChannelManager {
             )
         );
 
-        // check receiver sig matches state hash
-        require(receiver == ECTools.recoverSigner(state, sig));
+        // check sender sig matches state hash
+        require(sender == ECTools.recoverSigner(state, sig));
 
         // Check the initial thread state is in the threadRoot
         require(_isContained(state, proof, channel.threadRoot) == true, "initial thread state is not contained in threadRoot");
@@ -585,11 +585,11 @@ contract ChannelManager {
         // PROCESS THREAD UPDATE
         // *********************
 
-        require(updatedTxCountxCount > txCount, "updated thread txCount must be higher than the initial thread txCount");
+        require(updatedTxCount > txCount, "updated thread txCount must be higher than the initial thread txCount");
         require(updatedWeiBalances[0].add(updatedWeiBalances[1]) == weiBalances[0].add(weiBalances[1]), "updated wei balances must match sum of initial wei balances");
         require(updatedTokenBalances[0].add(updatedTokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
-        // prepare state update hash to check hub sig
+        // prepare state update hash to check sender sig
         bytes32 update = keccak256(
             abi.encodePacked(
                 address(this),
@@ -602,8 +602,8 @@ contract ChannelManager {
             )
         );
 
-        // check receiver sig matches state update hash
-        require(receiver == ECTools.recoverSigner(update, updateSig));
+        // check sender sig matches state update hash
+        require(sender == ECTools.recoverSigner(update, updateSig));
 
         thread.weiBalances = updatedWeiBalances;
         thread.tokenBalances = updatedTokenBalances;
@@ -611,8 +611,8 @@ contract ChannelManager {
         thread.inDispute = true;
     }
 
-    // recipient can empty anytime with a state update after startExitThread/WithUpdate is called
-    function recieverEmptyThread(
+    // non-sender can empty anytime with a state update after startExitThread/WithUpdate is called
+    function fastEmptyThread(
         address user,
         address sender,
         address receiver,
@@ -621,7 +621,7 @@ contract ChannelManager {
         uint256 txCount,
         bytes proof,
         string sig
-    ) {
+    ) public noReentrancy {
         Channel storage channel = channels[user];
         require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
@@ -630,11 +630,12 @@ contract ChannelManager {
         Thread storage thread = channel.threads[sender][receiver];
         require(thread.inDispute, "thread must be in dispute");
 
+        // assumes that the non-sender has a later thread state than what was being proposed when the thread exit started
         require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
         require(weiBalances[0].add(weiBalances[1]) == thread.weiBalances[0].add(thread.weiBalances[1]), "updated wei balances must match sum of thread wei balances");
         require(tokenBalances[0].add(tokenBalances[1]) == thread.tokenBalances[0].add(thread.tokenBalances[1]), "updated token balances must match sum of thread token balances");
 
-        // prepare state hash to check hub sig
+        // prepare state hash to check sender sig
         bytes32 state = keccak256(
             abi.encodePacked(
                 address(this),
@@ -647,8 +648,8 @@ contract ChannelManager {
             )
         );
 
-        // check receiver sig matches state hash
-        require(receiver == ECTools.recoverSigner(state, sig));
+        // check sender sig matches state hash
+        require(sender == ECTools.recoverSigner(state, sig));
 
         // deduct hub/user wei/tokens about to be emptied from the thread from the total channel balances
         channel.weiBalances[2] = channel.weiBalances[2].sub(weiBalances[0]).sub(weiBalances[1]);
@@ -672,7 +673,7 @@ contract ChannelManager {
         require(approvedToken.transfer(user, tokenBalances[1]), "user token withdrawal transfer failed");
         thread.tokenBalances[1] = 0;
 
-        thread.txCount = updatedTxCount;
+        thread.txCount = txCount;
         thread.inDispute = false;
 
         // decrement the channel threadCount
@@ -758,6 +759,8 @@ contract ChannelManager {
         channel.threadRoot = bytes32(0x0);
         channel.threadClosingTime = 0;
         channel.status = Status.Open;
+
+        // TODO need to think about resetting thread state based on nukeThreads
     }
 
     function _isContained(bytes32 _hash, bytes _proof, bytes32 _root) internal pure returns (bool) {
