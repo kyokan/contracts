@@ -815,3 +815,10 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
 ## recipientEmptyThreads (TODO)
 
 ## nukeThreads (TODO)
+
+# Install and run tests
+```
+$ npm i
+$ npm run ganache &
+$ npm test
+```
