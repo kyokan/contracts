@@ -29,7 +29,7 @@ contract ChannelManager {
     // event's ``balance`` field will not have been updated to reflect that
     // balance).
     event DidUpdateChannel (
-        indexed address user,
+        address indexed user,
         uint256 senderIdx,
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
@@ -44,7 +44,7 @@ contract ChannelManager {
     // event will contain the channel state after any state that has been
     // applied as part of startExitWithUpdate.
     event DidStartExitChannel (
-        indexed address user,
+        address indexed user,
         uint256 senderIdx,
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
@@ -56,7 +56,7 @@ contract ChannelManager {
     // Note: like DidStartExitChannel, the payload contains thechannel state after
     // any update has been applied.
     event DidEmptyChannel (
-        indexed address user,
+        address indexed user,
         uint256 senderIdx,
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
@@ -66,9 +66,9 @@ contract ChannelManager {
     );
 
     event DidStartExitThread (
-        indexed address user,
-        address sender,
-        address receiver,
+        address user,
+        address indexed sender,
+        address indexed receiver,
         uint256 senderIdx,
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
@@ -76,13 +76,13 @@ contract ChannelManager {
     );
 
     event DidEmptyThread (
-        indexed address user,
-        address sender,
-        address receiver,
+        address user,
+        address indexed sender,
+        address indexed receiver,
         uint256 senderIdx,
 
-        // TODO: is there any reason to include the thread's balance before the
-        // close?
+        uint256[2] oldWeiBalances,
+        uint256[2] oldTokenBalances,
 
         uint256[2] channelWeiBalances,
         uint256[2] channelTokenBalances,
@@ -95,9 +95,8 @@ contract ChannelManager {
         indexed address user,
         address senderAddress,
 
-        // TODO: it seems like it could be interesting (or, at very least,
-        // helpful with debugging) to include the old thread count and the
-        // old thread balances here.
+        uint256 weiAmount,
+        uint256 tokenAmount,
 
         uint256[2] channelWeiBalances,
         uint256[2] channelTokenBalances,
@@ -824,6 +823,7 @@ contract ChannelManager {
         require((msg.sender == hub && sender == user) || (msg.sender == user && receiver == user), "only hub or user, as the non-sender, can call this function");
 
         Thread storage thread = channel.threads[sender][receiver];
+        Thread memory oldThread = thread
         require(thread.inDispute, "thread must be in dispute");
 
         // assumes that the non-sender has a later thread state than what was being proposed when the thread exit started
@@ -887,6 +887,10 @@ contract ChannelManager {
             sender,
             receiver,
             msg.sender == hub ? 0 : 1,
+
+            thread.weiBalances,
+            thread.tokenBalances,
+
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
@@ -906,6 +910,7 @@ contract ChannelManager {
         require(channel.threadClosingTime < now, "thread closing time must have passed");
 
         Thread storage thread = channel.threads[sender][receiver];
+        Thread memory oldThread = thread
         require(thread.inDispute, "thread must be in dispute");
 
         // deduct hub/user wei/tokens about to be emptied from the thread from the total channel balances
@@ -948,6 +953,10 @@ contract ChannelManager {
             sender,
             receiver,
             msg.sender == hub ? 0 : 1,
+
+            thread.weiBalances,
+            thread.tokenBalances,
+
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
@@ -967,11 +976,13 @@ contract ChannelManager {
         // transfer any remaining channel wei to user
         totalChannelWei = totalChannelWei.sub(channel.weiBalances[2]);
         user.transfer(channel.weiBalances[2]);
+        uint256 weiAmount = channel.weiBalances[2];
         channel.weiBalances[2] = 0;
 
         // transfer any remaining channel tokens to user
         totalChannelTokens = totalChannelToken.sub(channel.tokenBalances[2]);
         require(approvedToken.transfer(user, channel.tokenBalances[2]), "user token withdrawal transfer failed");
+        uint256 tokenAmount = channel.tokenBalances[2];
         channel.tokenBalances[2] = 0;
 
         // reset channel params
@@ -985,6 +996,10 @@ contract ChannelManager {
         emit DidNukeThreads(
             user,
             msg.sender,
+
+            weiAmount,
+            tokenAmount,
+
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
