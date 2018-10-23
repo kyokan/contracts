@@ -118,3 +118,7 @@ And finally, an adapted version of performer exchange + withdrawal where the dep
         channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
         recipient.transfer(pendingWeiUpdates[3]);
+        
+
+
+Suffice to say, deposits are credited to the balance offchain as part of a state transition that introduces pending operations IF AND ONLY  IF the withdrawal exceeds the deposit amount. If the withdrawal amount exceeds the deposit amount, the onchain calculations will assume that the deposit amount has already been credited to the user's balance and WILL NOT add it again.        
