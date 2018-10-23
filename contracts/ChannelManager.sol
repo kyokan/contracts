@@ -101,10 +101,8 @@ contract ChannelManager {
     event DidNukeThreads(
         address indexed user,
         address senderAddress,
-
         uint256 weiAmount,
         uint256 tokenAmount,
-
         uint256[2] channelWeiBalances,
         uint256[2] channelTokenBalances,
         uint256[2] channelTxCount,
@@ -223,24 +221,6 @@ contract ChannelManager {
         // check user sig against state hash
         require(user == ECTools.recoverSigner(state, sigUser));
 
-
-        /*
-        verifyUserSig(
-            user,
-            recipient,
-            weiBalances,
-            tokenBalances,
-            pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-            pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-            txCount,
-            threadRoot,
-            threadCount,
-            timeout,
-            sigUser,
-            ""
-        );
-        */
-
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
         require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
 
@@ -303,10 +283,6 @@ contract ChannelManager {
         address recipient,
         uint256[2] weiBalances, // [hub, user]
         uint256[2] tokenBalances, // [hub, user]
-        // uint256[2] pendingWeiDeposits, // [hub, user]
-        // uint256[2] pendingTokenDeposits, // [hub, user]
-        // uint256[2] pendingWeiWithdrawals, // [hub, user]
-        // uint256[2] pendingTokenWithdrawals, // [hub, user]
         uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
         uint256[4] pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
         uint256[2] txCount, // persisted onchain even when empty
@@ -314,9 +290,7 @@ contract ChannelManager {
         uint256 threadCount,
         uint256 timeout,
         string sigHub
-        // string sigUser // TODO - do we need this, if hub sends (they can sign it at the time)
     ) public payable noReentrancy {
-        //address user = msg.sender;
         require(msg.value == pendingWeiUpdates[2], "msg.value is not equal to pending user deposit");
 
         Channel storage channel = channels[msg.sender];
@@ -335,10 +309,6 @@ contract ChannelManager {
                 recipient,
                 weiBalances, // [hub, user]
                 tokenBalances, // [hub, user]
-                // pendingWeiDeposits, // [hub, user]
-                // pendingTokenDeposits, // [hub, user]
-                // pendingWeiWithdrawals, // [hub, user]
-                // pendingTokenWithdrawals, // [hub, user]
                 pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
                 pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
                 txCount, // persisted onchain even when empty
@@ -348,9 +318,8 @@ contract ChannelManager {
             )
         );
 
-        // check hub and user sigs against state hash
+        // check hub sig against state hash
         require(hub == ECTools.recoverSigner(state, sigHub));
-        //require(user == ECTools.recoverSigner(state, sigUser));
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
         require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
@@ -413,48 +382,6 @@ contract ChannelManager {
         );
     }
 
-
-    function verifyUserSig (
-        address user,
-        address recipient,
-        uint256[2] weiBalances, // [hub, user]
-        uint256[2] tokenBalances, // [hub, user]
-        uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-        uint256[4] pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-        uint256[2] txCount, // [global, onchain] persisted onchain even when empty
-        bytes32 threadRoot,
-        uint256 threadCount,
-        uint256 timeout,
-        string sigUser,
-        string sigHub
-    ) internal view {
-        // prepare state hash to check hub sig
-        bytes32 state = keccak256(
-            abi.encodePacked(
-                address(this),
-                user,
-                recipient,
-                weiBalances, // [hub, user]
-                tokenBalances, // [hub, user]
-                pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-                pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-                txCount, // persisted onchain even when empty
-                threadRoot,
-                threadCount,
-                timeout
-            )
-        );
-
-        if (keccak256(sigUser) != keccak256("")) {
-            require(user == ECTools.recoverSigner(state, sigUser));
-        }
-
-        if (keccak256(sigHub) != keccak256("")) {
-            require(hub == ECTools.recoverSigner(state, sigHub));
-        }
-
-    }
-
     /**********************
      * Unilateral Functions
      *********************/
@@ -488,10 +415,6 @@ contract ChannelManager {
         address user,
         uint256[2] weiBalances, // [hub, user]
         uint256[2] tokenBalances, // [hub, user]
-        // uint256[2] pendingWeiDeposits, // [hub, user]
-        // uint256[2] pendingTokenDeposits, // [hub, user]
-        // uint256[2] pendingWeiWithdrawals, // [hub, user]
-        // uint256[2] pendingTokenWithdrawals, // [hub, user]
         uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
         uint256[4] pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
         uint256[2] txCount, // [global, onchain] persisted onchain even when empty
@@ -515,10 +438,6 @@ contract ChannelManager {
                 user,
                 weiBalances, // [hub, user]
                 tokenBalances, // [hub, user]
-                // pendingWeiDeposits, // [hub, user]
-                // pendingTokenDeposits, // [hub, user]
-                // pendingWeiWithdrawals, // [hub, user]
-                // pendingTokenWithdrawals, // [hub, user]
                 pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
                 pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
                 txCount, // persisted onchain even when empty
@@ -585,10 +504,6 @@ contract ChannelManager {
         address user,
         uint256[2] weiBalances, // [hub, user]
         uint256[2] tokenBalances, // [hub, user]
-        // uint256[2] pendingWeiDeposits, // [hub, user]
-        // uint256[2] pendingTokenDeposits, // [hub, user]
-        // uint256[2] pendingWeiWithdrawals, // [hub, user]
-        // uint256[2] pendingTokenWithdrawals, // [hub, user]
         uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
         uint256[4] pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
         uint256[2] txCount, // persisted onchain even when empty
@@ -614,10 +529,6 @@ contract ChannelManager {
                 user,
                 weiBalances, // [hub, user]
                 tokenBalances, // [hub, user]
-                // pendingWeiDeposits, // [hub, user]
-                // pendingTokenDeposits, // [hub, user]
-                // pendingWeiWithdrawals, // [hub, user]
-                // pendingTokenWithdrawals, // [hub, user]
                 pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
                 pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
                 txCount, // persisted onchain even when empty
@@ -673,10 +584,17 @@ contract ChannelManager {
         channel.threadRoot = threadRoot;
         channel.threadCount = threadCount;
 
+        if (channel.threadCount > 0) {
+            channel.threadClosingTime = 0;
+            channel.status == Status.Open;
+        } else {
+            channel.threadClosingTime = now.add(challengePeriod);
+            channel.status == Status.ThreadDispute;
+        }
+
         channel.exitInitiator = address(0x0);
         channel.channelClosingTime = 0;
-        channel.threadClosingTime = now.add(challengePeriod);
-        channel.status == Status.ThreadDispute;
+
 
         emit DidEmptyChannelWithChallenge(
             user,
@@ -720,10 +638,16 @@ contract ChannelManager {
         require(approvedToken.transfer(user, channel.tokenBalances[1]), "user token withdrawal transfer failed");
         channel.tokenBalances[1] = 0;
 
+        if (channel.threadCount > 0) {
+            channel.threadClosingTime = 0;
+            channel.status == Status.Open;
+        } else {
+            channel.threadClosingTime = now.add(challengePeriod);
+            channel.status == Status.ThreadDispute;
+        }
+
         channel.exitInitiator = address(0x0);
         channel.channelClosingTime = 0;
-        channel.threadClosingTime = now.add(challengePeriod);
-        channel.status = Status.ThreadDispute;
 
         emit DidEmptyChannel(
             user,
@@ -794,8 +718,6 @@ contract ChannelManager {
     // either party starts exit with offchain state
     function startExitThreadWithUpdate(
         address user,
-        // address sender,
-        // address receiver,
         address[2] threadMembers,
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
@@ -816,25 +738,7 @@ contract ChannelManager {
         require(!thread.inDispute, "thread must not already be in dispute");
         require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
 
-        // prepare state hash to check sender sig
-        // bytes32 state = keccak256(
-        //     abi.encodePacked(
-        //         address(this),
-        //         user,
-        //         sender,
-        //         receiver,
-        //         weiBalances, // [hub, user]
-        //         tokenBalances, // [hub, user]
-        //         txCount // persisted onchain even when empty
-        //     )
-        // );
-        verifyThread(msg.sender, sig, user, threadMembers, weiBalances, tokenBalances, txCount, proof, channel.threadRoot);
-
-        // check sender sig matches state hash
-        //require(sender == ECTools.recoverSigner(state, sig));
-
-        // Check the initial thread state is in the threadRoot
-        //require(_isContained(state, proof, channel.threadRoot) == true, "initial thread state is not contained in threadRoot");
+        _verifyThread(msg.sender, sig, user, threadMembers, weiBalances, tokenBalances, txCount, proof, channel.threadRoot);
 
         // *********************
         // PROCESS THREAD UPDATE
@@ -844,22 +748,7 @@ contract ChannelManager {
         require(updatedWeiBalances[0].add(updatedWeiBalances[1]) == weiBalances[0].add(weiBalances[1]), "updated wei balances must match sum of initial wei balances");
         require(updatedTokenBalances[0].add(updatedTokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
-        // prepare state update hash to check sender sig
-        // bytes32 update = keccak256(
-        //     abi.encodePacked(
-        //         address(this),
-        //         user,
-        //         sender,
-        //         receiver,
-        //         updatedWeiBalances, // [hub, user]
-        //         updatedTokenBalances, // [hub, user]
-        //         updatedTxCount // persisted onchain even when empty
-        //     )
-        // );
-        verifyThread(msg.sender, updateSig, user, threadMembers, updatedWeiBalances, updatedTokenBalances, updatedTxCount, proof, bytes32(0x0));
-
-        // check sender sig matches state update hash
-        //require(sender == ECTools.recoverSigner(update, updateSig));
+        _verifyThread(msg.sender, updateSig, user, threadMembers, updatedWeiBalances, updatedTokenBalances, updatedTxCount, proof, bytes32(0x0));
 
         thread.weiBalances = updatedWeiBalances;
         thread.tokenBalances = updatedTokenBalances;
@@ -876,35 +765,6 @@ contract ChannelManager {
             thread.txCount
         );
     }
-
-    function verifyThread(
-        address sender,
-        string sig,
-        address user,
-        address[2] threadMembers,
-        uint256[2] weiBalances,
-        uint256[2] tokenBalances,
-        uint256 txCount,
-        bytes proof,
-        bytes32 threadRoot
-    ) internal view {
-        bytes32 state = keccak256(
-            abi.encodePacked(
-                address(this),
-                user,
-                threadMembers,
-                weiBalances, // [hub, user]
-                tokenBalances, // [hub, user]
-                txCount // persisted onchain even when empty
-            )
-        );
-        require(sender == ECTools.recoverSigner(state, sig));
-        if (threadRoot != bytes32(0x0)) {
-            require(_isContained(state, proof, threadRoot) == true, "initial thread state is not contained in threadRoot");
-        }
-    }
-
-
 
     // non-sender can empty anytime with a state update after startExitThread/WithUpdate is called
     function fastEmptyThread(
@@ -1082,21 +942,45 @@ contract ChannelManager {
         channel.threadClosingTime = 0;
         channel.status = Status.Open;
 
-        // TODO need to think about resetting thread state based on nukeThreads
-
         emit DidNukeThreads(
             user,
             msg.sender,
-
             weiAmount,
             tokenAmount,
-
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
             channel.threadRoot,
             channel.threadCount
         );
+    }
+
+    function _verifyThread(
+        address sender,
+        string sig,
+        address user,
+        address[2] threadMembers,
+        uint256[2] weiBalances,
+        uint256[2] tokenBalances,
+        uint256 txCount,
+        bytes proof,
+        bytes32 threadRoot
+    ) internal view {
+        bytes32 state = keccak256(
+            abi.encodePacked(
+                address(this),
+                user,
+                threadMembers,
+                weiBalances, // [hub, user]
+                tokenBalances, // [hub, user]
+                txCount // persisted onchain even when empty
+            )
+        );
+        require(sender == ECTools.recoverSigner(state, sig));
+
+        if (threadRoot != bytes32(0x0)) {
+            require(_isContained(state, proof, threadRoot) == true, "initial thread state is not contained in threadRoot");
+        }
     }
 
     function _isContained(bytes32 _hash, bytes _proof, bytes32 _root) internal pure returns (bool) {
