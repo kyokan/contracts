@@ -1,0 +1,133 @@
+Arjun did a great job of pointing out the following edge case:
+
+Normally, you deduct the withdrawal in advance from the offchain balances:
+        ```
+        // { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // { weiBalances: [0, .5], tokenBalances: [0, 100], pendingWeiUpdates: [0, 0, 0, 0.5], txCount: [2, 2] }
+        // NOTE: pendingWeiUpdates: [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        ```
+In this construct, the offchain balance represents the *operating balance available to spend*. So when you create a pending withdrawal, you move that amount *out of* the the `weiBalances` and *into* the pending withdrawals.
+
+However, in the case where performer wants to do an exchange + withdrawal in a single tx (represented below), the ETH to fund the performer's ETH withdrawal comes from the hub's deposit not the offchain balance. As you'll notice below, the hub's deposit is on the performer's behalf as a `userDeposit`, not a `hubDeposit`, which the hub does because the user also signed over possession of their 100 BOOTY to the hub:
+        ```
+        // { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // { weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 0.5], txCount: [2, 2] }
+        // NOTE: pendingWeiUpdates: [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        ```
+To my knowledge, this is the only case where we will have either the hub or user having BOTH a deposit AND a withdrawal in the same transactions—it would make very little sense for the hub to both deposit and withdraw for itself.
+
+This `userDeposit -> userWithdraw` breaks how we were computing the resulting onchain balance for the user, because our calculations were assuming that the ETH was coming from the offchain balance, not the deposit. The following onchain balance update would be incorrect:
+
+        ```
+        // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // TEST: { weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 0.5], txCount: [2, 2] }
+        // EXPECT: channel.weiBalances[1] -> 0.5
+        // RESULT: channel.weiBalances[1] -> 1
+        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+        ```
+
+Now, we realized that we _could_ update the calculation to subtract the withdrawal amount from the onchain balances before it is saved, which would make this work:
+
+        ```
+        // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // TEST: { weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 0.5], txCount: [2, 2] }
+        // EXPECT: channel.weiBalances[1] -> 0.5
+        // RESULT: channel.weiBalances[1] -> 0.5
+        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]); // <- SUBTRACT WITHDRAWAL
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+        ```
+
+However, this would fail for the initial simple withdrawal case:
+
+        ```
+        // INIT { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // TEST { weiBalances: [0, .5], tokenBalances: [0, 100], pendingWeiUpdates: [0, 0, 0, 0.5], txCount: [2, 2] }
+        // EXPECT: channel.weiBalances[1] -> 0.5
+        // RESULT: channel.weiBalances[1] -> 0
+        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+        ```
+
+Arjun presented a solution which sums up the deposits and withdrawals first, and then, if the deposits are greater than the withdrawals, adds the remaining deposit to offhcain balance, and saves the result onchain. If the deposits are less than the withdrawals, the assumption is that the offchain balance has already accounted for the withdrawal, and should not be updated before it is saved onchain. The updated code is as follows:
+
+        ```
+        // NOTE: pendingWeiUpdates: [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        uint256[2] compiledWeiUpdate; // [hubUpdate, userUpdate]
+        if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
+            compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
+        } else {
+            compiledWeiUpdate[1] = 0;
+        }
+
+        channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+        ```
+Let's see how it does in a few test cases.
+
+Simple withdrawal:
+
+        ```
+        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // INIT { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // TEST { weiBalances: [0, .5], tokenBalances: [0, 100], pendingWeiUpdates: [0, 0, 0, 0.5], txCount: [2, 2] }
+        // NOTE: compiledWeiUpdate[1] -> 0 (deposits are less than withdrawals)
+        // EXPECT: channel.weiBalances[1] -> 0.5
+        // RESULT: channel.weiBalances[1] -> 0.5
+
+        if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
+            compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
+        } else {
+            compiledWeiUpdate[1] = 0;
+        }
+
+        channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+        ```
+
+Performer withdrawal + exchange:
+
+        ```
+        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // TEST: { weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 0.5], txCount: [2, 2] }
+        // NOTE: compiledWeiUpdate[1] -> 0 (deposits are equal to withdrawals)
+        // EXPECT: channel.weiBalances[1] -> 0.5
+        // RESULT: channel.weiBalances[1] -> 0.5
+
+        if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
+            compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
+        } else {
+            compiledWeiUpdate[1] = 0;
+        }
+
+        channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+        ```
+
+And finally, an adapted version of performer exchange + withdrawal where the deposits > withdrawals:
+
+        ```
+        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // TEST: { weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 1, 0.5], txCount: [2, 2] }
+        // NOTE: compiledWeiUpdate[1] -> 0.5 (deposits are greater than withdrawals)
+        // EXPECT: channel.weiBalances[1] -> 1
+        // RESULT: channel.weiBalances[1] -> 1
+
+        if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
+            compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
+        } else {
+            compiledWeiUpdate[1] = 0;
+        }
+
+        channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+        ```

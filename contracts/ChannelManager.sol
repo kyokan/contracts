@@ -284,7 +284,7 @@ contract ChannelManager {
         uint256[2] compiledWeiUpdate;
         uint256[2] compiledTokenUpdate;
 
-        if(pendingWeiUpdates[0] > pendingWeiUpdates[1]) {
+        if (pendingWeiUpdates[0] > pendingWeiUpdates[1]) {
             compiledWeiUpdate[0] = pendingWeiUpdates[0].sub(pendingWeiUpdates[1]);
         } else {
             compiledWeiUpdate[0] = 0;
@@ -306,6 +306,7 @@ contract ChannelManager {
         // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.5], tokenBalances: [0, 100], txCount: [1, 1] }
         // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.2], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.3, 0.6], txCount: [1, 2] }
 
+        uint256[2] compiledWeiUpdate; // [hubUpdate, userUpdate]
         if(pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
             compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
         } else {
