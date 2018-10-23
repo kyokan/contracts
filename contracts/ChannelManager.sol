@@ -832,7 +832,7 @@ contract ChannelManager {
         //         txCount // persisted onchain even when empty
         //     )
         // );
-        verifyThreadSig(msg.sender, sig, user, threadMembers, weiBalances, tokenBalances, txCount);
+        verifyThread(msg.sender, sig, user, threadMembers, weiBalances, tokenBalances, txCount, proof, channel.threadRoot);
 
         // check sender sig matches state hash
         //require(sender == ECTools.recoverSigner(state, sig));
@@ -860,7 +860,7 @@ contract ChannelManager {
         //         updatedTxCount // persisted onchain even when empty
         //     )
         // );
-        verifyThreadSig(msg.sender, updateSig, user, threadMembers, updatedWeiBalances, updatedTokenBalances, updatedTxCount);
+        verifyThread(msg.sender, updateSig, user, threadMembers, updatedWeiBalances, updatedTokenBalances, updatedTxCount, proof, bytes32(0x0));
 
         // check sender sig matches state update hash
         //require(sender == ECTools.recoverSigner(update, updateSig));
@@ -881,14 +881,16 @@ contract ChannelManager {
         );
     }
 
-    function verifyThreadSig(
+    function verifyThread(
         address sender,
         string sig,
         address user, 
         address[2] threadMembers, 
         uint256[2] weiBalances, 
         uint256[2] tokenBalances, 
-        uint256 txCount
+        uint256 txCount,
+        bytes proof,
+        bytes32 threadRoot
     ) internal view {
         bytes32 state = keccak256(
             abi.encodePacked(
@@ -901,7 +903,12 @@ contract ChannelManager {
             )
         );
         require(sender == ECTools.recoverSigner(state, sig));
+        if (threadRoot != bytes32(0x0)) {
+            require(_isContained(state, proof, threadRoot) == true, "initial thread state is not contained in threadRoot");
+        }
     }
+
+
 
     // non-sender can empty anytime with a state update after startExitThread/WithUpdate is called
     function fastEmptyThread(
@@ -911,7 +918,7 @@ contract ChannelManager {
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
         uint256 txCount,
-        bytes proof,
+        // bytes proof,
         string sig
     ) public noReentrancy {
         Channel storage channel = channels[user];
@@ -920,7 +927,7 @@ contract ChannelManager {
         require((msg.sender == hub && sender == user) || (msg.sender == user && receiver == user), "only hub or user, as the non-sender, can call this function");
 
         Thread storage thread = channel.threads[sender][receiver];
-        Thread memory oldThread = thread;
+        // Thread memory oldThread = thread;
         require(thread.inDispute, "thread must be in dispute");
 
         // assumes that the non-sender has a later thread state than what was being proposed when the thread exit started
@@ -1008,7 +1015,7 @@ contract ChannelManager {
         require(channel.threadClosingTime < now, "thread closing time must have passed");
 
         Thread storage thread = channel.threads[sender][receiver];
-        Thread memory oldThread = thread;
+        // Thread memory oldThread = thread;
         require(thread.inDispute, "thread must be in dispute");
 
         // deduct hub/user wei/tokens about to be emptied from the thread from the total channel balances
