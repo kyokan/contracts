@@ -25,7 +25,8 @@ module.exports = async function(deployer, network, accounts) {
   await deployer.link(EC, LC);
   await deployer.deploy(
     LC,
-    "0xdDA6327139485221633A1FcD65f4aC932E60A2e1",
-    accounts[0]
+    accounts[0],
+    10000,
+    tokenAddress
   );
 };
