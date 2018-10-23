@@ -195,11 +195,15 @@ contract ChannelManager {
         uint256[2] txCount, // [global, onchain] persisted onchain even when empty
         bytes32 threadRoot,
         uint256 threadCount,
-        uint256 timeout, //TODO maybe dont pass in and explicitly set this to 0?
+        uint256 timeout,
         string sigUser
     ) public noReentrancy onlyHub {
         Channel storage channel = channels[user];
         require(channel.status == Status.Open, "channel must be open");
+
+        // Usage:
+        // 1. exchange operations to protect user from exchange rate fluctuations
+        require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
 
         // prepare state hash to check user sig
         bytes32 state = keccak256(
@@ -214,9 +218,46 @@ contract ChannelManager {
                 txCount, // persisted onchain even when empty
                 threadRoot,
                 threadCount,
-                timeout //TODO explicit 0?
+                timeout
             )
         );
+
+        // TODO
+        // What if the deposits are made first, and computed as part of the channel.balances first.
+        // { channel.weiBalances[2] = 0.5, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0, 0.5], txCount: [1, 1] }
+        // - what are all the checks that need to be made in order to process a deposit?
+
+        // 1. Do all deposit checks.
+        // 2. Deposit and update onchain values.
+        // 2.5. If the de
+        // 3. Do all withdrawal checks.
+        // 4. Withdraw and update onchain values.
+
+        // Arjun's recommendation:
+        // 1. For all cases, hubDeposit - hubWithdrawal = hubUdate
+        // 2. userUpate = userDeposit - userWithdrawal
+        // 3. If negative, discard (already accounted for in the balance)
+        // TEST - 1: { weiBalances: [0, 10], txCount: [1,1] }
+        // TEST - 2: { weiBalances: [0, 0], userDeposit: 20, userWithdrawal: 30, txCount: [1,1] } <- VALID execute deposit + withdrawal
+        // 4. If positive, new balance = balance + userUpdate
+
+        // Issue - when you deposit and update onchain values, the onchain values do not
+
+        if (pendingWeiUpdates[2] > 0 && pendingWeiUpdates[3] > 0) {
+            require(/* deposit + final balance >= withdrawal*/);
+            weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        } else {
+            channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
+        }
+
+        // This makes sense if your deposit + weiBalance >= withdrawal
+        // If you have a state if you want to *move* where the withdrawal is coming from, then we shouldn't assume it was deducted from your wei balance
+
+        // Performer withdrawal + exchange
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [0, 100], txCount: [1, 1] }
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 0.5], txCount: [1, 1] }
+
+
 
         // check user sig against state hash
         require(user == ECTools.recoverSigner(state, sigUser));
@@ -235,17 +276,62 @@ contract ChannelManager {
         // check that channel balances and pending deposits cover wei/token withdrawals
         require(channel.weiBalances[0].add(pendingWeiUpdates[0]) >= weiBalances[0].add(pendingWeiUpdates[1]), "insufficient wei for hub withdrawal");
         require(channel.weiBalances[1].add(pendingWeiUpdates[2]) >= weiBalances[1].add(pendingWeiUpdates[3]), "insufficient wei for user withdrawal");
+
+        // TODO doesn't cover exchange case properly.
+        // - check the total balances of the channel, not the independent balances of hub/user
+        // Performer withdrawal + exchange
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [0, 100], txCount: [1, 1] }
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 0.5], txCount: [1, 1] }
+
         require(channel.tokenBalances[0].add(pendingTokenUpdates[0]) >= tokenBalances[0].add(pendingTokenUpdates[1]), "insufficient tokens for hub withdrawal");
         require(channel.tokenBalances[1].add(pendingTokenUpdates[2]) >= tokenBalances[1].add(pendingTokenUpdates[3]), "insufficient tokens for user withdrawal");
 
         // update hub wei channel balance, account for deposit/withdrawal in reserves
-        channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
+        channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0]);
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
 
-        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // Performer withdrawal + exchange
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [0, 100], txCount: [1, 1] }
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.1], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.6, 0.5], txCount: [1, 1] }
+
+        // The reason this is happening is because in the special case of the hub depositing on the user's behalf, the user's withdrawal is being accounted for from the hub's
+        // deposit, not the balances. Normally, you deduct the withdrawal from the balances, which is why this breaks the normal flow.
+        // This would also be fine if the user's balance is *above* the withdrawal amount - the edge case is when the user's balance is *below* the withdrawal amount.
+
+        if (pendingWeiUpdates[0] > 0 && pendingWeiUpdates[1] > 0) {
+
+        } else {
+
+        }
+
+
+
+        // Performer withdrawal + exchange
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.6, 0.5], txCount: [1, 1] }
+        // .5 + .6 - .5 = .6
         channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+
+        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // TODO - this doesn't work, channel.weiBalances[1] would be 0.5 instead of 0
+        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
+
+        // ? = .1 + .6 - .5 = .2
+        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.5], txCount: [1, 1] }
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.1], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0, 0.4], txCount: [1, 1] }
+        // ? = .1 + 0 - .4 = -0.3
+        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+
+
+
+
+
+
+        // THE REST OF THE STUFF
+
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
-        //TODO is this okay only cause it's onlyHub (and hub would have to provide deposit)?
         recipient.transfer(pendingWeiUpdates[3]);
 
         // update hub token channel balance, account for deposit/withdrawal in reserves
@@ -462,15 +548,13 @@ contract ChannelManager {
         require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
         require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
 
-        // TODO when would this happen?
         // pending onchain txs have been executed - force update offchain state to reflect this
         if (txCount[1] == channel.txCount[1]) {
-            weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
-            weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
-            tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[0]).sub(pendingTokenUpdates[1]);
-            tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[3]);
+            weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0]);
+            weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
+            tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[0]);
+            tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[2]);
 
-        // TODO Check this
         // pending onchain txs have *not* been executed - revert pending withdrawals back into offchain balances
         } else { //txCount[1] > channel.txCount[1]
             weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[1]);
