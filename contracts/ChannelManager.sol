@@ -195,7 +195,7 @@ contract ChannelManager {
         uint256[2] txCount, // [global, onchain] persisted onchain even when empty
         bytes32 threadRoot,
         uint256 threadCount,
-        uint256 timeout,
+        uint256 timeout, //TODO maybe dont pass in and explicitly set this to 0?
         string sigUser
     ) public noReentrancy onlyHub {
         Channel storage channel = channels[user];
@@ -214,7 +214,7 @@ contract ChannelManager {
                 txCount, // persisted onchain even when empty
                 threadRoot,
                 threadCount,
-                timeout
+                timeout //TODO explicit 0?
             )
         );
 
@@ -245,6 +245,7 @@ contract ChannelManager {
         // update user wei channel balance, account for deposit/withdrawal in reserves
         channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        //TODO is this okay only cause it's onlyHub (and hub would have to provide deposit)?
         recipient.transfer(pendingWeiUpdates[3]);
 
         // update hub token channel balance, account for deposit/withdrawal in reserves
@@ -290,6 +291,7 @@ contract ChannelManager {
         uint256 threadCount,
         uint256 timeout,
         string sigHub
+        //TODO needs sigUser
     ) public payable noReentrancy {
         require(msg.value == pendingWeiUpdates[2], "msg.value is not equal to pending user deposit");
 
@@ -320,6 +322,7 @@ contract ChannelManager {
 
         // check hub sig against state hash
         require(hub == ECTools.recoverSigner(state, sigHub));
+        //TODO Likely need to check user sig (hub can call this unilaterally)
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
         require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
@@ -429,6 +432,7 @@ contract ChannelManager {
 
         require(msg.sender == hub || msg.sender == user, "exit initiator must be user or hub");
 
+        //TODO If this is 0, then all pending state has to be 0? NO because Hubdates have no timeout
         require(timeout == 0, "can't start exit with time-sensitive states");
 
         // prepare state hash to check hub sig
@@ -458,6 +462,7 @@ contract ChannelManager {
         require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
         require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
 
+        // TODO when would this happen?
         // pending onchain txs have been executed - force update offchain state to reflect this
         if (txCount[1] == channel.txCount[1]) {
             weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
@@ -465,8 +470,9 @@ contract ChannelManager {
             tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[0]).sub(pendingTokenUpdates[1]);
             tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[3]);
 
+        // TODO Check this
         // pending onchain txs have *not* been executed - revert pending withdrawals back into offchain balances
-        } else {
+        } else { //txCount[1] > channel.txCount[1]
             weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[1]);
             weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[3]);
             tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[1]);
@@ -520,6 +526,7 @@ contract ChannelManager {
         require(msg.sender != channel.exitInitiator, "challenger can not be exit initiator");
         require(msg.sender == hub || msg.sender == user, "challenger must be either user or hub");
 
+        //TODO if (timeout == 0 && pendings != 0) then msg.sender == hub
         require(timeout == 0, "can't start exit with time-sensitive states");
 
         // prepare state hash to check hub sig
@@ -549,6 +556,7 @@ contract ChannelManager {
         require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
         require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
 
+        // TODO Check this
         // pending onchain txs have been executed - force update offchain state to reflect this
         if (txCount[1] == channel.txCount[1]) {
             weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
@@ -584,6 +592,7 @@ contract ChannelManager {
         channel.threadRoot = threadRoot;
         channel.threadCount = threadCount;
 
+        //TODO should these be swapped?
         if (channel.threadCount > 0) {
             channel.threadClosingTime = 0;
             channel.status == Status.Open;
@@ -638,6 +647,7 @@ contract ChannelManager {
         require(approvedToken.transfer(user, channel.tokenBalances[1]), "user token withdrawal transfer failed");
         channel.tokenBalances[1] = 0;
 
+        //TODO WHY(lol)
         if (channel.threadCount > 0) {
             channel.threadClosingTime = 0;
             channel.status == Status.Open;
@@ -678,6 +688,7 @@ contract ChannelManager {
 
         Thread storage thread = channel.threads[sender][receiver];
         require(!thread.inDispute, "thread must not already be in dispute");
+        //TODO What happens when txCount == 0?
         require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
 
         // prepare state hash to check sender sig
@@ -693,7 +704,7 @@ contract ChannelManager {
             )
         );
 
-        // check receiver sig matches state hash
+        // check sender sig matches state hash
         require(sender == ECTools.recoverSigner(state, sig));
 
         // Check the initial thread state is in the threadRoot
@@ -718,7 +729,7 @@ contract ChannelManager {
     // either party starts exit with offchain state
     function startExitThreadWithUpdate(
         address user,
-        address[2] threadMembers,
+        address[2] threadMembers, //[sender, receiver]
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
         uint256 txCount,
@@ -744,10 +755,12 @@ contract ChannelManager {
         // PROCESS THREAD UPDATE
         // *********************
 
+        //TODO explicitly require that updated balances for sender < old balances for sender. Otherwise, sender can generate a sig where they send themselves money
         require(updatedTxCount > txCount, "updated thread txCount must be higher than the initial thread txCount");
         require(updatedWeiBalances[0].add(updatedWeiBalances[1]) == weiBalances[0].add(weiBalances[1]), "updated wei balances must match sum of initial wei balances");
         require(updatedTokenBalances[0].add(updatedTokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
+        // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
         _verifyThread(msg.sender, updateSig, user, threadMembers, updatedWeiBalances, updatedTokenBalances, updatedTxCount, proof, bytes32(0x0));
 
         thread.weiBalances = updatedWeiBalances;
@@ -890,6 +903,7 @@ contract ChannelManager {
         require(approvedToken.transfer(user, thread.tokenBalances[1]), "user token withdrawal transfer failed");
         thread.tokenBalances[1] = 0;
 
+        //TODO We should just use onchain recorded thread txCount
         thread.txCount = updatedTxCount;
         thread.inDispute = false;
 
@@ -929,6 +943,7 @@ contract ChannelManager {
         user.transfer(channel.weiBalances[2]);
         uint256 weiAmount = channel.weiBalances[2];
         channel.weiBalances[2] = 0;
+        //TODO what about weibalances[0] and weibalances[1]?
 
         // transfer any remaining channel tokens to user
         totalChannelToken = totalChannelToken.sub(channel.tokenBalances[2]);
