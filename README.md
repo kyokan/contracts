@@ -13,7 +13,7 @@ Contract: [https://github.com/SpankChain/virtual-channels/blob/refucktor/contrac
 The ChannelManager.sol contract manages bidirectional ETH/ERC20 channels between
 a single payment channel hub and its users. It also allows users who have channels with the hub to open P2P unidirectional ETH/ERC20 subchannels that we call *threads* to pay each other directly, without the hub ever having custody of the transferred funds. The ChannelManager can also be used to secure ETH/ERC20 exchange.
 
-The contract is designed to secure *offchain* updates - that is, it offers the hub and users the ability to, at any time, decide to exit their channels and withdraw all their funds. At minimum, the contract must be able to handle these unilaterally initiated exits. 
+The contract is designed to secure *offchain* updates - that is, it offers the hub and users the ability to, at any time, decide to exit their channels and withdraw all their funds. At minimum, the contract must be able to handle these unilaterally initiated exits.
 
 # Overview
 
@@ -25,7 +25,7 @@ To increase security, ChannelManager.sol can only support one ERC20 token. The a
 
 Instead of storing channels onchain by a random ID generated at the time the channel is opened, we have moved to storing channels onchain by the user's address. This means that users can only ever have **one** channel open on this contract. This has several implications:
 
-1. Users no longer need to **open** channels, because channels are assumed to be open for all users as soon as the contract is deployed. 
+1. Users no longer need to **open** channels, because channels are assumed to be open for all users as soon as the contract is deployed.
 2. When users want to fully withdraw their balances from the contract, the `txCount` (nonce) of the channel will be saved onchain, even as the balances are zeroed out.
 3. When users want to deposit additional funds into the contract *after* they have fully withdrawn, they will need to increment the `txCount` that was previously saved onchain, picking up from where they left off.
 
@@ -137,7 +137,7 @@ Because Token <> ETH exchanges can happen offchain, they also require a timeout 
 
 When performing offchain Token <> ETH swaps, the hub proposes a state update to the user. The user signs the state update and returns it to the hub. The hub checks that the exchange rate in the signed state update is still valid, then countersigns the update and returns it to the user.
 
-Note: in theory it's possible for the hub to the half-signed state update, only countersigning if exchange rates fluctuate in the Hub's favour. There are mechanisms which could be used to protect against this (see below), but there are currently no plans to implement them.
+Note: in theory it's possible for the hub to hold on to the half-signed state update, only countersigning if exchange rates fluctuate in the Hub's favour. There are mechanisms which could be used to protect against this (see below), but there are currently no plans to implement them.
 
 One way the user could be protected is if the hub includes a second, half-signed state update with `txCount = N + 1` which is otherwise identical to state update with `txCount = N` when they return the proposed exchange rate. This way, if the hub does not return the counter-signed exchange to the wallet in a timely manner, the user could use this half-signed update to unilaterally close the channel.
 
@@ -182,7 +182,7 @@ For example, if the state published to the chain was:
 
     Then, after the transaction has been confirmed, an offchain update would be proposed that moves the deposits to the balances:
 
-        // Offchain update 
+        // Offchain update
         weiBalances: [0, 1 eth]
         tokenBalances: [69 booty, 0]
         txCount: [2, 1]
@@ -266,21 +266,21 @@ Performers can withdraw from channels using the same mechanism regardless of whe
 
 ## Global Constants
 
-    `address public hub; 
+    address public hub;
     uint256 public challengePeriod;
     ERC20 public approvedToken;`
 
 There is a single privileged `hub` address set at contract deployment which can store ETH/ERC20 reserves on the contract, deposit those reserves into channels, and withdraw any unallocated reserves.
 
-There is a single `challengePeriod` set at contract deployment and is used for all channel and thread disputes. 
+There is a single `challengePeriod` set at contract deployment and is used for all channel and thread disputes.
 
-There is a single `approvedToken` ERC20 token set at contract deployment which is the only token that can be used in channels for the contract. This prevents [reentrancy attacks from user-provided malicious token contracts](https://www.reddit.com/r/ethdev/comments/9mp33i/we_got_spanked_what_we_know_so_far/). 
+There is a single `approvedToken` ERC20 token set at contract deployment which is the only token that can be used in channels for the contract. This prevents [reentrancy attacks from user-provided malicious token contracts](https://www.reddit.com/r/ethdev/comments/9mp33i/we_got_spanked_what_we_know_so_far/).
 
 ## Constructor
 
     constructor(
-    	address _hub, 
-    	uint256 _challengePeriod, 
+    	address _hub,
+    	uint256 _challengePeriod,
     	address _tokenAddress
     ) public {
       hub = _hub;
@@ -288,14 +288,14 @@ There is a single `approvedToken` ERC20 token set at contract deployment which i
       approvedToken = ERC20(_tokenAddress);
     }
 
-These global constants are all set by the contract constructor at deployment. 
+These global constants are all set by the contract constructor at deployment.
 
 ## Internal Accounting
 
     uint256 public totalChannelWei;
     uint256 public totalChannelToken;
 
-The `totalChannelWei` and `totalChannelToken` track the total wei and tokens that has been deposited in channels by the hub and all users. 
+The `totalChannelWei` and `totalChannelToken` track the total wei and tokens that has been deposited in channels by the hub and all users.
 
 ## Modifiers
 
@@ -334,7 +334,7 @@ Called by the hub to release deposited ETH or ERC20s. Checks to ensure that the 
                 getHubReserveTokens() >= tokenAmount,
                 "hubContractWithdraw: Contract token funds not sufficient to withdraw"
             );
-    
+
             hub.transfer(weiAmount);
             require(
                 approvedToken.transfer(hub, tokenAmount),
@@ -393,10 +393,10 @@ Returns the amount of ERC20 tokens that the hub can withdraw.
         ) public noReentrancy onlyHub {
             Channel storage channel = channels[user];
             require(channel.status == Status.Open, "channel must be open");
-    
+
             // Usage: exchange operations to protect user from exchange rate fluctuations
             require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
-    
+
             // prepare state hash to check hub sig
             bytes32 state = keccak256(
                 abi.encodePacked(
@@ -415,49 +415,49 @@ Returns the amount of ERC20 tokens that the hub can withdraw.
                     timeout
                 )
             );
-    
+
             // check user sig against state hash
             require(user == ECTools.recoverSigner(state, sigUser));
-    
+
             require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
             require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
-    
+
             // offchain wei/token balances do not exceed onchain total wei/token
             require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
             require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
-    
+
             // hub has enough reserves for wei/token deposits
             require(pendingWeiDeposits[0].add(pendingWeiDeposits[1]) <= getHubReserveWei(), "insufficient reserve wei for deposits");
             require(pendingTokenDeposits[0].add(pendingTokenDeposits[1]) <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
-    
+
             // check that channel balances and pending deposits cover wei/token withdrawals
             require(channel.weiBalances[0].add(pendingWeiDeposits[0]) >= weiBalances[0].add(pendingWeiWithdrawals[0]), "insufficient wei for hub withdrawal");
             require(channel.weiBalances[1].add(pendingWeiDeposits[1]) >= weiBalances[1].add(pendingWeiWithdrawals[1]), "insufficient wei for user withdrawal");
             require(channel.tokenBalances[0].add(pendingTokenDeposits[0]) >= tokenBalances[0].add(pendingTokenWithdrawals[0]), "insufficient tokens for hub withdrawal");
             require(channel.tokenBalances[1].add(pendingTokenDeposits[1]) >= tokenBalances[1].add(pendingTokenWithdrawals[1]), "insufficient tokens for user withdrawal");
-    
+
             // update hub wei channel balance, account for deposit/withdrawal in reserves
             channel.weiBalances[0] = weiBalances[0].add(pendingWeiDeposits[0]).sub(pendingWeiWithdrawals[0]);
             totalChannelWei = totalChannelWei.add(pendingWeiDeposits[0]).sub(pendingWeiWithdrawals[0]);
-    
+
             // update user wei channel balance, account for deposit/withdrawal in reserves
             channel.weiBalances[1] = weiBalances[1].add(pendingWeiDeposits[1]).sub(pendingWeiWithdrawals[1]);
             totalChannelWei = totalChannelWei.add(pendingWeiDeposits[1]).sub(pendingWeiWithdrawals[1]);
             recipient.transfer(pendingWeiWithdrawals[1]);
-    
+
             // update hub token channel balance, account for deposit/withdrawal in reserves
             channel.tokenBalances[0] = tokenBalances[0].add(pendingTokenDeposits[0]).sub(pendingTokenWithdrawals[0]);
             totalChannelToken = totalChannelToken.add(pendingTokenDeposits[0]).sub(pendingTokenWithdrawals[0]);
-    
+
             // update user token channel balance, account for deposit/withdrawal in reserves
             channel.tokenBalances[1] = tokenBalances[1].add(pendingTokenDeposits[1]).sub(pendingTokenWithdrawals[1]);
             totalChannelToken = totalChannelToken.add(pendingTokenDeposits[1]).sub(pendingTokenWithdrawals[1]);
             require(approvedToken.transfer(recipient, pendingTokenWithdrawals[1]), "user token withdrawal transfer failed");
-    
+
             // update channel total balances
             channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiDeposit[0]).add(pendingWeiDeposit[1]).sub(pendingWeiWithdrawals[0]).sub(pendingWeiWithdrawals[1]);
             channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenDeposit[0]).add(pendingTokenDeposit[1]).sub(pendingTokenWithdrawals[0]).sub(pendingTokenWithdrawals[1]);
-    
+
             // update state variables
             channel.txCount = txCount;
             channel.threadRoot = threadRoot;
@@ -485,15 +485,15 @@ Similar to `hubAuthorizedUpdate`, `userAuthorizedUpdate` is called by the user t
         ) public payable noReentrancy {
             address user = msg.sender;
             require(msg.value == pendingWeiDeposits[1], "msg.value is not equal to pending user deposit");
-    
+
             Channel storage channel = channels[user];
             require(channel.status == Status.Open, "channel must be open");
-    
+
             // Usage:
             // 1. exchange operations to protect hub from exchange rate fluctuations
             // 2. protect hub against user failing to send the transaction in a timely manner
             require(timeout || now < timeout, "the timeout must be zero or not have passed");
-    
+
             // prepare state hash to check hub sig
             bytes32 state = keccak256(
                 abi.encodePacked(
@@ -512,35 +512,35 @@ Similar to `hubAuthorizedUpdate`, `userAuthorizedUpdate` is called by the user t
                     timeout
                 )
             );
-    
+
             // check hub and user sigs against state hash
             require(hub == ECTools.recoverSigner(state, sigHub));
             require(user == ECTools.recoverSigner(state, sigUser));
-    
+
             require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
             require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
-    
+
             // offchain wei/token balances do not exceed onchain total wei/token
             require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
             require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
-    
+
             // hub has enough reserves for wei/token deposits
             require(pendingWeiDeposits[0] <= getHubReserveWei(), "insufficient reserve wei for deposits");
             require(pendingTokenDeposits[0]) <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
-    
+
             // transfer user token deposit to this contract
             require(approvedToken.transferFrom(msg.sender, address(this), pendingTokenDeposits[1]), "user token deposit failed");
-    
+
             // check that channel balances and pending deposits cover wei/token withdrawals
             require(channel.weiBalances[0].add(pendingWeiDeposits[0]) >= weiBalances[0].add(pendingWeiWithdrawals[0]), "insufficient wei for hub withdrawal");
             require(channel.weiBalances[1].add(pendingWeiDeposits[1]) >= weiBalances[1].add(pendingWeiWithdrawals[1]), "insufficient wei for user withdrawal");
             require(channel.tokenBalances[0].add(pendingTokenDeposits[0]) >= tokenBalances[0].add(pendingTokenWithdrawals[0]), "insufficient tokens for hub withdrawal");
             require(channel.tokenBalances[1].add(pendingTokenDeposits[1]) >= tokenBalances[1].add(pendingTokenWithdrawals[1]), "insufficient tokens for user withdrawal");
-    
+
             // update hub wei channel balance, account for deposit/withdrawal in reserves
             channel.weiBalances[0] = weiBalances[0].add(pendingWeiDeposits[0]).sub(pendingWeiWithdrawals[0]);
             totalChannelWei = totalChannelWei.add(pendingWeiDeposits[0]).sub(pendingWeiWithdrawals[0]);
-    
+
             // update user wei channel balance, account for deposit/withdrawal in reserves
             channel.weiBalances[1] = weiBalances[1].add(pendingWeiDeposits[1]).sub(pendingWeiWithdrawals[1]);
             totalChannelWei = totalChannelWei.add(pendingWeiDeposits[1]);
@@ -549,16 +549,16 @@ Similar to `hubAuthorizedUpdate`, `userAuthorizedUpdate` is called by the user t
             // update hub token channel balance, account for deposit/withdrawal in reserves
             channel.tokenBalances[0] = tokenBalances[0].add(pendingTokenDeposits[0]).sub(pendingTokenWithdrawals[0]);
             totalChannelToken = totalChannelToken.add(pendingTokenDeposits[0]).sub(pendingTokenWithdrawals[0]);
-    
+
             // update user token channel balance, account for deposit/withdrawal in reserves
             channel.tokenBalances[1] = tokenBalances[1].add(pendingTokenDeposits[1]).sub(pendingTokenWithdrawals[1]);
             totalChannelToken = totalChannelToken.add(pendingTokenDeposits[1]);
             require(approvedToken.transfer(recipient, pendingTokenWithdrawals[1]), "user token withdrawal transfer failed");
-    
+
             // update channel total balances
             channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiDeposit[0]).add(pendingWeiDeposit[1]).sub(pendingWeiWithdrawals[0]).sub(pendingWeiWithdrawals[1]);
             channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenDeposit[0]).add(pendingTokenDeposit[1]).sub(pendingTokenWithdrawals[0]).sub(pendingTokenWithdrawals[1]);
-    
+
             // update state variables
             channel.txCount = txCount;
             channel.threadRoot = threadRoot;
@@ -580,9 +580,9 @@ Begins the unilateral channel withdrawal process for the currently-stored onchai
         ) public noReentrancy {
             Channel storage channel = channels[user];
             require(channel.status == Status.Open, "channel must be open");
-    
+
             require(msg.sender == hub || msg.sender == user, "exit initiator must be user or hub");
-    
+
             channel.exitInitiator = msg.sender;
             channel.channelClosingTime = now.add(challengePeriod);
             channel.status = Status.ChannelDispute;
@@ -621,11 +621,11 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
         ) public noReentrancy {
             Channel storage channel = channels[user];
             require(channel.status == Status.Open, "channel must be open");
-    
+
             require(msg.sender == hub || msg.sender == user, "exit initiator must be user or hub");
-    
+
             require(timeout == 0, "can't start exit with time-sensitive states");
-    
+
             // prepare state hash to check hub sig
             bytes32 state = keccak256(
                 abi.encodePacked(
@@ -643,25 +643,25 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
                     timeout
                 )
             );
-    
+
             // check hub and user sigs against state hash
             require(hub == ECTools.recoverSigner(state, sigHub));
             require(user == ECTools.recoverSigner(state, sigUser));
-    
+
             require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
             require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
-    
+
             // offchain wei/token balances do not exceed onchain total wei/token
             require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
             require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
-    
+
             // pending onchain txs have been executed - force update offchain state to reflect this
             if (txCount[1] == channel.txCount[1]) {
                 weiBalances[0] = weiBalances[0].add(pendingWeiDeposits[0]).sub(pendingWeiWithdrawals[0]);
                 weiBalances[1] = weiBalances[1].add(pendingWeiDeposits[1]).sub(pendingWeiWithdrawals[1]);
                 tokenBalances[0] = tokenBalances[0].add(pendingTokenDeposits[0]).sub(pendingTokenWithdrawals[0]);
                 tokenBalances[1] = tokenBalances[1].add(pendingTokenDeposits[1]).sub(pendingTokenWithdrawals[1]);
-    
+
             // pending onchain txs have *not* been executed - revert pending withdrawals back into offchain balances
             } else {
                 weiBalances[0] = weiBalances[0].add(pendingWeiWithdrawals[0]);
@@ -669,18 +669,18 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
                 tokenBalances[0] = tokenBalances[0].add(pendingTokenWithdrawals[0]);
                 tokenBalances[1] = tokenBalances[1].add(pendingTokenWithdrawals[1]);
             }
-    
+
             // set the channel wei/token balances
             channel.weiBalances[0] = weiBalances[0];
             channel.weiBalances[1] = weiBalances[1];
             channel.tokenBalances[0] = tokenBalances[0];
             channel.tokenBalances[1] = tokenBalances[1];
-    
+
             // update state variables
             channel.txCount = txCount;
             channel.threadRoot = threadRoot;
             channel.threadCount = threadCount;
-    
+
             channel.exitInitiator = msg.sender;
             channel.channelClosingTime = now.add(challengePeriod);
             channel.status == Status.ChannelDispute;
@@ -708,12 +708,12 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
             Channel storage channel = channels[user];
             require(channel.status == Status.ChannelDispute, "channel must be in dispute");
             require(now < channel.channelClosingTime, "channel closing time must not have passed");
-    
+
             require(msg.sender != channel.exitInitiator, "challenger can not be exit initiator");
             require(msg.sender == hub || msg.sender == user, "challenger must be either user or hub");
-    
+
             require(timeout == 0, "can't start exit with time-sensitive states");
-    
+
             // prepare state hash to check hub sig
             bytes32 state = keccak256(
                 abi.encodePacked(
@@ -731,18 +731,18 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
                     timeout
                 )
             );
-    
+
             // check hub and user sigs against state hash
             require(hub == ECTools.recoverSigner(state, sigHub));
             require(user == ECTools.recoverSigner(state, sigUser));
-    
+
             require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
             require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
-    
+
             // offchain wei/token balances do not exceed onchain total wei/token
             require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
             require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
-    
+
             // pending onchain txs have been executed - force update offchain state to reflect this
             if (txCount[1] == channel.txCount[1]) {
                 weiBalances[0] = weiBalances[0].add(pendingWeiDeposits[0]).sub(pendingWeiWithdrawals[0]);
@@ -750,18 +750,18 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
                 tokenBalances[0] = tokenBalances[0].add(pendingTokenDeposits[0]).sub(pendingTokenWithdrawals[0]);
                 tokenBalances[1] = tokenBalances[1].add(pendingTokenDeposits[1]).sub(pendingTokenWithdrawals[1]);
             }
-    
+
             // set the channel wei/token balances
             channel.weiBalances[0] = weiBalances[0];
             channel.weiBalances[1] = weiBalances[1];
             channel.tokenBalances[0] = tokenBalances[0];
             channel.tokenBalances[1] = tokenBalances[1];
-    
+
             // update state variables
             channel.txCount = txCount;
             channel.threadRoot = threadRoot;
             channel.threadCount = threadCount;
-    
+
             channel.exitInitiator = address(0x0);
             channel.channelClosingTime = 0;
             channel.threadClosingTime = now.add(challengePeriod);
@@ -775,31 +775,31 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
         ) public noReentrancy {
             Channel storage channel = channels[user];
             require(channel.status == Status.ChannelDispute, "channel must be in dispute");
-    
+
             require(channel.channelClosingTime < now, "channel closing time must have passed");
-    
+
             // deduct hub/user wei/tokens from total channel balances
             channel.weiBalances[2] = channel.weiBalances[2].sub(channel.weiBalances[0]).sub(channel.weiBalances[1]);
             channel.tokenBalances[2] = channel.tokenBalances[2].sub(channel.tokenBalances[0]).sub(channel.tokenBalances[1]);
-    
+
             // transfer hub wei balance from channel to reserves
             totalChannelWei = totalChannelWei.sub(channel.weiBalances[0]);
             channel.weiBalances[0] = 0;
-    
+
             // transfer user wei balance to user
             totalChannelWei = totalChannelWei.sub(channel.weiBalances[1]);
             user.transfer(channel.weiBalances[1]);
             channel.weiBalances[1] = 0;
-    
+
             // transfer hub token balance from channel to reserves
             totalChannelTokens = totalChannelToken.sub(channel.tokenBalances[0]);
             channel.tokenBalances[0] = 0;
-    
+
             // transfer user token balance to user
             totalChannelTokens = totalChannelToken.sub(channel.tokenBalances[1]);
             require(approvedToken.transfer(user, channel.tokenBalances[1]), "user token withdrawal transfer failed");
             channel.tokenBalances[1] = 0;
-    
+
             channel.exitInitiator = address(0x0);
             channel.channelClosingTime = 0;
             channel.threadClosingTime = now.add(challengePeriod):
