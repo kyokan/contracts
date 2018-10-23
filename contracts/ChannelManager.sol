@@ -439,11 +439,27 @@ contract ChannelManager {
             tokenBalances[1] = tokenBalances[1].add(pendingTokenDeposits[1]).sub(pendingTokenWithdrawals[1]);
         }
 
-        // set the channel wei/token balances
-        channel.weiBalances[0] = weiBalances[0];
-        channel.weiBalances[1] = weiBalances[1];
-        channel.tokenBalances[0] = tokenBalances[0];
-        channel.tokenBalances[1] = tokenBalances[1];
+        // deduct hub/user wei/tokens from total channel balances
+        channel.weiBalances[2] = channel.weiBalances[2].sub(weiBalances[0]).sub(weiBalances[1]);
+        channel.tokenBalances[2] = channel.tokenBalances[2].sub(tokenBalances[0]).sub(tokenBalances[1]);
+
+        // transfer hub wei balance from channel to reserves
+        totalChannelWei = totalChannelWei.sub(channel.weiBalances[0]);
+        channel.weiBalances[0] = 0;
+
+        // transfer user wei balance to user
+        totalChannelWei = totalChannelWei.sub(channel.weiBalances[1]);
+        user.transfer(channel.weiBalances[1]);
+        channel.weiBalances[1] = 0;
+
+        // transfer hub token balance from channel to reserves
+        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[0]);
+        channel.tokenBalances[0] = 0;
+
+        // transfer user token balance to user
+        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[1]);
+        require(approvedToken.transfer(user, channel.tokenBalances[1]), "user token withdrawal transfer failed");
+        channel.tokenBalances[1] = 0;
 
         // update state variables
         channel.txCount = txCount;
