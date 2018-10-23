@@ -91,10 +91,6 @@ contract ChannelManager {
         address indexed sender,
         address indexed receiver,
         uint256 senderIdx,
-
-        uint256[2] oldWeiBalances,
-        uint256[2] oldTokenBalances,
-
         uint256[2] channelWeiBalances,
         uint256[2] channelTokenBalances,
         uint256[2] channelTxCount,
@@ -452,11 +448,11 @@ contract ChannelManager {
         if (keccak256(sigUser) != keccak256("")) {
             require(user == ECTools.recoverSigner(state, sigUser));
         }
-        
+
         if (keccak256(sigHub) != keccak256("")) {
             require(hub == ECTools.recoverSigner(state, sigHub));
         }
-        
+
     }
 
     /**********************
@@ -884,10 +880,10 @@ contract ChannelManager {
     function verifyThread(
         address sender,
         string sig,
-        address user, 
-        address[2] threadMembers, 
-        uint256[2] weiBalances, 
-        uint256[2] tokenBalances, 
+        address user,
+        address[2] threadMembers,
+        uint256[2] weiBalances,
+        uint256[2] tokenBalances,
         uint256 txCount,
         bytes proof,
         bytes32 threadRoot
@@ -927,7 +923,6 @@ contract ChannelManager {
         require((msg.sender == hub && sender == user) || (msg.sender == user && receiver == user), "only hub or user, as the non-sender, can call this function");
 
         Thread storage thread = channel.threads[sender][receiver];
-        // Thread memory oldThread = thread;
         require(thread.inDispute, "thread must be in dispute");
 
         // assumes that the non-sender has a later thread state than what was being proposed when the thread exit started
@@ -991,10 +986,6 @@ contract ChannelManager {
             sender,
             receiver,
             msg.sender == hub ? 0 : 1,
-
-            thread.weiBalances,
-            thread.tokenBalances,
-
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
@@ -1015,7 +1006,6 @@ contract ChannelManager {
         require(channel.threadClosingTime < now, "thread closing time must have passed");
 
         Thread storage thread = channel.threads[sender][receiver];
-        // Thread memory oldThread = thread;
         require(thread.inDispute, "thread must be in dispute");
 
         // deduct hub/user wei/tokens about to be emptied from the thread from the total channel balances
@@ -1058,10 +1048,6 @@ contract ChannelManager {
             sender,
             receiver,
             msg.sender == hub ? 0 : 1,
-
-            thread.weiBalances,
-            thread.tokenBalances,
-
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
