@@ -205,25 +205,20 @@ contract ChannelManager {
         // 1. exchange operations to protect user from exchange rate fluctuations
         require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
 
-        // prepare state hash to check user sig
-        bytes32 state = keccak256(
-            abi.encodePacked(
-                address(this),
-                user,
-                recipient,
-                weiBalances, // [hub, user]
-                tokenBalances, // [hub, user]
-                pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-                pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-                txCount, // persisted onchain even when empty
-                threadRoot,
-                threadCount,
-                timeout
-            )
+        _verifySig(
+            user,
+            recipient,
+            weiBalances,
+            tokenBalances,
+            pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+            pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+            txCount,
+            threadRoot,
+            threadCount,
+            timeout,
+            sigUser,
+            ""
         );
-
-        // check user sig against state hash
-        require(user == ECTools.recoverSigner(state, sigUser));
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
         require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
@@ -236,11 +231,11 @@ contract ChannelManager {
         require(pendingWeiUpdates[0].add(pendingWeiUpdates[2]) <= getHubReserveWei(), "insufficient reserve wei for deposits");
         require(pendingTokenUpdates[0].add(pendingTokenUpdates[2]) <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
 
-        // wei is conserved
+        // wei is conserved - the current total channel wei + both deposits > final balances + both withdrawals
         require(channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]) >=
                 weiBalances[0].add(weiBalances[1]).add(pendingWeiUpdates[1]).add(pendingWeiUpdates[3]), "insufficient wei");
 
-        // token is conserved
+        // token is conserved - the current total channel token + both deposits > final balances + both withdrawals
         require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
                 tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
 
@@ -367,6 +362,14 @@ contract ChannelManager {
         // offchain wei/token balances do not exceed onchain total wei/token
         require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
         require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
+
+        // wei is conserved
+        require(channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]) >=
+                weiBalances[0].add(weiBalances[1]).add(pendingWeiUpdates[1]).add(pendingWeiUpdates[3]), "insufficient wei");
+
+        // token is conserved
+        require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
+                tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
 
         // hub has enough reserves for wei/token deposits
         require(pendingWeiUpdates[0] <= getHubReserveWei(), "insufficient reserve wei for deposits");
@@ -1015,6 +1018,46 @@ contract ChannelManager {
             channel.threadRoot,
             channel.threadCount
         );
+    }
+
+    function _verifySig (
+        address user,
+        address recipient,
+        uint256[2] weiBalances, // [hub, user]
+        uint256[2] tokenBalances, // [hub, user]
+        uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        uint256[4] pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        uint256[2] txCount, // [global, onchain] persisted onchain even when empty
+        bytes32 threadRoot,
+        uint256 threadCount,
+        uint256 timeout,
+        string sigUser,
+        string sigHub
+    ) internal view {
+        // prepare state hash to check hub sig
+        bytes32 state = keccak256(
+            abi.encodePacked(
+                address(this),
+                user,
+                recipient,
+                weiBalances, // [hub, user]
+                tokenBalances, // [hub, user]
+                pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+                pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+                txCount, // persisted onchain even when empty
+                threadRoot,
+                threadCount,
+                timeout
+            )
+        );
+
+        if (keccak256(sigUser) != keccak256("")) {
+            require(user == ECTools.recoverSigner(state, sigUser));
+        }
+
+        if (keccak256(sigHub) != keccak256("")) {
+            require(hub == ECTools.recoverSigner(state, sigHub));
+        }
     }
 
     function _verifyThread(
