@@ -5,6 +5,8 @@ const Ledger = artifacts.require("./ChannelManager.sol");
 const EC = artifacts.require("./ECTools.sol");
 const Token = artifacts.require("./token/HumanStandardToken.sol");
 const Connext = require("connext");
+const privKeys = require("./privKeys.json")
+
 
 const should = require("chai")
   .use(require("chai-as-promised"))
@@ -37,16 +39,72 @@ function generateProof(vcHashToProve, vcInitStates) {
   return proof;
 }
 
-contract("ChannelManager :: constructor", accounts => {
-  it("deploy", async() => {
-    const channelManager = await Ledger.deployed()
-    const tokenAddress = await Token.deployed()
-    const hubAddress = await channelManager.hub()
-    const challengePeriod = await channelManager.challengePeriod()
-    const approvedToken = await channelManager.approvedToken()
+// NOTE : ganache-cli -m 'refuse result toy bunker royal small story exhaust know piano base stand'
+contract("ChannelManager", accounts => {
+  let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken, initState
+  before('deploy contracts', async () => {
+    channelManager = await Ledger.deployed()
+    tokenAddress = await Token.deployed()
+    hubAddress = await channelManager.hub()
+    challengePeriod = await channelManager.challengePeriod()
+    approvedToken = await channelManager.approvedToken()
+  })
+  describe('contract deployment', () => {
+    it("verify initialized parameters", async() => {
+      assert.equal(hubAddress, accounts[0])
+      assert.equal(challengePeriod.toNumber(), 10000)
+      assert.equal(approvedToken, tokenAddress.address)
+    })
+  })
+  describe('hubAuthorizedUpdate', () => {
+    let hash, init
+    beforeEach(async () => {
+      init = {
+        "user" : accounts[0],
+        "recipient" : accounts[1],
+        "weiBalances" : [0, 0],
+        "tokenBalances" : [0, 0],
+        "pendingWeiUpdates" : [0, 0, 0, 0],
+        "pendingTokenUpdates" : [0, 0, 0, 0],
+        "txCount" : [1,1],
+        "threadRoot" : emptyRootHash,
+        "threadCount" : 0,
+        "timeout" : 0
+      }
 
-    assert.equal(hubAddress, accounts[0])
-    assert.equal(challengePeriod.toNumber(), 10000)
-    assert.equal(approvedToken, tokenAddress.address)
+      hash = await web3.utils.soliditySha3(
+        channelManager.address,
+        init.user, 
+        init.recipient,
+        {type: 'uint256[2]', value: init.weiBalances},
+        {type: 'uint256[2]', value: init.tokenBalances},
+        {type: 'uint256[4]', value: init.pendingWeiUpdates},
+        {type: 'uint256[4]', value: init.pendingTokenUpdates},
+        {type: 'uint256[2]', value: init.txCount},
+        {type: 'bytes32', value: init.threadRoot},
+        init.threadCount,
+        init.timeout
+      )
+      const sig = await web3.eth.accounts.sign(hash, privKeys[0])
+      init.sigUser = sig.signature
+      init.sigHub = ""
+    })
+
+    it("happy case", async() => {
+      await channelManager.hubAuthorizedUpdate(
+        init.user, 
+        init.recipient,
+        init.weiBalances,
+        init.tokenBalances,
+        init.pendingWeiUpdates,
+        init.pendingTokenUpdates,
+        init.txCount,
+        init.threadRoot,
+        init.threadCount,
+        init.timeout,
+        init.sigUser
+      )
+    })
   })
 });
+
