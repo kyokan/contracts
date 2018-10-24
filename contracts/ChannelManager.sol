@@ -239,61 +239,11 @@ contract ChannelManager {
         require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
                 tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
 
-        // update hub wei balance
-        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
-        // Assumes the deposit has *not yet* been added to the balances.
-        if (pendingWeiUpdates[0] > pendingWeiUpdates[1]) {
-            channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0].sub(pendingWeiUpdates[1]));
-        // Otherwise, if the deposit is less than or equal to the withdrawal,
-        // Assumes the deposit has *already* been added to the balances.
-        } else {
-            channel.weiBalances[0] = weiBalances[0];
-        }
+        _updateChannelBalances(channel, weiBalances, tokenBalances, pendingWeiUpdates, pendingTokenUpdates);
 
-        // update user wei balance
-        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
-        // Assumes the deposit has *not yet* been added to the balances.
-        if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
-            channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2].sub(pendingWeiUpdates[3]));
-
-        // Otherwise, if the deposit is less than or equal to the withdrawal,
-        // Assumes the deposit has *already* been added to the balances.
-        } else {
-            channel.weiBalances[1] = weiBalances[1];
-        }
-
-        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[1]).sub(pendingWeiUpdates[3]);
+        // transfer wei and token to recipient
         recipient.transfer(pendingWeiUpdates[3]);
-
-        // update hub token balance
-        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
-        // Assumes the deposit has *not yet* been added to the balances.
-        if (pendingTokenUpdates[0] > pendingTokenUpdates[1]) {
-            channel.tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[0].sub(pendingTokenUpdates[1]));
-        // Otherwise, if the deposit is less than or equal to the withdrawal,
-        // Assumes the deposit has *already* been added to the balances.
-        } else {
-            channel.tokenBalances[0] = tokenBalances[0];
-        }
-
-        // update user token balance
-        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
-        // Assumes the deposit has *not yet* been added to the balances.
-        if (pendingTokenUpdates[2] > pendingTokenUpdates[3]) {
-            channel.tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[2].sub(pendingTokenUpdates[3]));
-
-        // Otherwise, if the deposit is less than or equal to the withdrawal,
-        // Assumes the deposit has *already* been added to the balances.
-        } else {
-            channel.tokenBalances[1] = tokenBalances[1];
-        }
-
-        totalChannelToken = totalChannelToken.add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[1]).sub(pendingTokenUpdates[3]);
         require(approvedToken.transfer(recipient, pendingTokenUpdates[3]), "user token withdrawal transfer failed");
-
-        // update channel total balances
-        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[1]).sub(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
-        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[1]).sub(pendingTokenUpdates[2]).sub(pendingTokenUpdates[3]);
 
         // update state variables
         channel.txCount = txCount;
@@ -336,25 +286,20 @@ contract ChannelManager {
         // 2. protect hub against user failing to send the transaction in a timely manner
         require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
 
-        // prepare state hash to check hub sig
-        bytes32 state = keccak256(
-            abi.encodePacked(
-                address(this),
-                msg.sender,
-                recipient,
-                weiBalances, // [hub, user]
-                tokenBalances, // [hub, user]
-                pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-                pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-                txCount, // persisted onchain even when empty
-                threadRoot,
-                threadCount,
-                timeout
-            )
+        _verifySig(
+            msg.sender,
+            recipient,
+            weiBalances,
+            tokenBalances,
+            pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+            pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+            txCount,
+            threadRoot,
+            threadCount,
+            timeout,
+            "", // skip hub sig verification
+            sigHub
         );
-
-        // check hub sig against state hash
-        require(hub == ECTools.recoverSigner(state, sigHub));
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
         require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
@@ -363,11 +308,11 @@ contract ChannelManager {
         require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
         require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
 
-        // wei is conserved
+        // wei is conserved - the current total channel wei + both deposits > final balances + both withdrawals
         require(channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]) >=
                 weiBalances[0].add(weiBalances[1]).add(pendingWeiUpdates[1]).add(pendingWeiUpdates[3]), "insufficient wei");
 
-        // token is conserved
+        // token is conserved - the current total channel token + both deposits > final balances + both withdrawals
         require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
                 tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
 
@@ -378,33 +323,11 @@ contract ChannelManager {
         // transfer user token deposit to this contract
         require(approvedToken.transferFrom(msg.sender, address(this), pendingTokenUpdates[2]), "user token deposit failed");
 
-        // check that channel balances and pending deposits cover wei/token withdrawals
-        require(channel.weiBalances[0].add(pendingWeiUpdates[0]) >= weiBalances[0].add(pendingWeiUpdates[1]), "insufficient wei for hub withdrawal");
-        require(channel.weiBalances[1].add(pendingWeiUpdates[2]) >= weiBalances[1].add(pendingWeiUpdates[3]), "insufficient wei for user withdrawal");
-        require(channel.tokenBalances[0].add(pendingTokenUpdates[0]) >= tokenBalances[0].add(pendingTokenUpdates[1]), "insufficient tokens for hub withdrawal");
-        require(channel.tokenBalances[1].add(pendingTokenUpdates[2]) >= tokenBalances[1].add(pendingTokenUpdates[3]), "insufficient tokens for user withdrawal");
+        _updateChannelBalances(channel, weiBalances, tokenBalances, pendingWeiUpdates, pendingTokenUpdates);
 
-        // update hub wei channel balance, account for deposit/withdrawal in reserves
-        channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
-        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
-
-        // update user wei channel balance, account for deposit/withdrawal in reserves
-        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
-        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]);
+        // transfer wei and token to recipient
         recipient.transfer(pendingWeiUpdates[3]);
-
-        // update hub token channel balance, account for deposit/withdrawal in reserves
-        channel.tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[0]).sub(pendingTokenUpdates[1]);
-        totalChannelToken = totalChannelToken.add(pendingTokenUpdates[0]).sub(pendingTokenUpdates[1]);
-
-        // update user token channel balance, account for deposit/withdrawal in reserves
-        channel.tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[3]);
-        totalChannelToken = totalChannelToken.add(pendingTokenUpdates[2]);
         require(approvedToken.transfer(recipient, pendingTokenUpdates[3]), "user token withdrawal transfer failed");
-
-        // update channel total balances
-        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[1]).sub(pendingWeiUpdates[3]);
-        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[1]).sub(pendingTokenUpdates[3]);
 
         // update state variables
         channel.txCount = txCount;
@@ -423,6 +346,55 @@ contract ChannelManager {
             threadCount,
             timeout
         );
+    }
+
+    function _applyPendingUpdates(
+        uint256[3] storage channelBalances,
+        uint256[2] balances,
+        uint256[4] pendingUpdates
+    ) internal {
+
+        // update hub balance
+        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
+        // Assumes the deposit has *not yet* been added to the balances.
+        if (pendingUpdates[0] > pendingUpdates[1]) {
+            channelBalances[0] = balances[0].add(pendingUpdates[0].sub(pendingUpdates[1]));
+        // Otherwise, if the deposit is less than or equal to the withdrawal,
+        // Assumes the deposit has *already* been added to the balances.
+        } else {
+            channelBalances[0] = balances[0];
+        }
+
+        // update user balance
+        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
+        // Assumes the deposit has *not yet* been added to the balances.
+        if (pendingUpdates[2] > pendingUpdates[3]) {
+            channelBalances[1] = balances[1].add(pendingUpdates[2].sub(pendingUpdates[3]));
+
+        // Otherwise, if the deposit is less than or equal to the withdrawal,
+        // Assumes the deposit has *already* been added to the balances.
+        } else {
+            channelBalances[1] = balances[1];
+        }
+
+    }
+
+    function _updateChannelBalances(
+        Channel storage channel,
+        uint256[2] weiBalances,
+        uint256[2] tokenBalances,
+        uint256[4] pendingWeiUpdates,
+        uint256[4] pendingTokenUpdates
+    ) internal {
+        _applyPendingUpdates(channel.weiBalances, weiBalances, pendingWeiUpdates);
+        _applyPendingUpdates(channel.tokenBalances, tokenBalances, pendingTokenUpdates);
+
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[1]).sub(pendingWeiUpdates[3]);
+        totalChannelToken = totalChannelToken.add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[1]).sub(pendingTokenUpdates[3]);
+
+        // update channel total balances
+        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[1]).sub(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[1]).sub(pendingTokenUpdates[2]).sub(pendingTokenUpdates[3]);
     }
 
     /**********************
