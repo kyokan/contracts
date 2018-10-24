@@ -39,6 +39,34 @@ function generateProof(vcHashToProve, vcInitStates) {
   return proof;
 }
 
+function getEventParams(tx, event) {
+  if (tx.logs.length > 0) {
+    for (let idx=0; idx < tx.logs.length; idx++) {
+      if (tx.logs[idx].event == event) {
+        return tx.logs[idx].args
+      }
+    }
+  }
+  return false
+}
+
+async function initHash(contract, init) {
+  const hash = await web3.utils.soliditySha3(
+    contract.address,
+    {type: 'address[2]', value: [init.user, init.recipient]},
+    {type: 'uint256[2]', value: init.weiBalances},
+    {type: 'uint256[2]', value: init.tokenBalances},
+    {type: 'uint256[4]', value: init.pendingWeiUpdates},
+    {type: 'uint256[4]', value: init.pendingTokenUpdates},
+    {type: 'uint256[2]', value: init.txCount},
+    {type: 'bytes32', value: init.threadRoot},
+    init.threadCount,
+    init.timeout
+  )
+  const sig = await web3.eth.accounts.sign(hash, privKeys[0])
+  return sig.signature
+}
+
 // NOTE : ganache-cli -m 'refuse result toy bunker royal small story exhaust know piano base stand'
 contract("ChannelManager", accounts => {
   let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken, initState
@@ -49,6 +77,7 @@ contract("ChannelManager", accounts => {
     challengePeriod = await channelManager.challengePeriod()
     approvedToken = await channelManager.approvedToken()
   })
+  
   describe('contract deployment', () => {
     it("verify initialized parameters", async() => {
       assert.equal(hubAddress, accounts[0])
@@ -56,6 +85,9 @@ contract("ChannelManager", accounts => {
       assert.equal(approvedToken, tokenAddress.address)
     })
   })
+
+
+  
   describe('hubAuthorizedUpdate', () => {
     let hash, init
     beforeEach(async () => {
@@ -71,26 +103,10 @@ contract("ChannelManager", accounts => {
         "threadCount" : 0,
         "timeout" : 0
       }
-
-      hash = await web3.utils.soliditySha3(
-        channelManager.address,
-        init.user, 
-        init.recipient,
-        {type: 'uint256[2]', value: init.weiBalances},
-        {type: 'uint256[2]', value: init.tokenBalances},
-        {type: 'uint256[4]', value: init.pendingWeiUpdates},
-        {type: 'uint256[4]', value: init.pendingTokenUpdates},
-        {type: 'uint256[2]', value: init.txCount},
-        {type: 'bytes32', value: init.threadRoot},
-        init.threadCount,
-        init.timeout
-      )
-      const sig = await web3.eth.accounts.sign(hash, privKeys[0])
-      init.sigUser = sig.signature
-      init.sigHub = ""
     })
 
     it("happy case", async() => {
+      init.sigUser = await initHash(channelManager, init)
       await channelManager.hubAuthorizedUpdate(
         init.user, 
         init.recipient,
