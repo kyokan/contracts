@@ -1,8 +1,6 @@
 const EC = artifacts.require("./ECTools.sol");
 const LC = artifacts.require("./ChannelManager.sol");
-const HumanStandardToken = artifacts.require(
-  "./lib/token/HumanStandardToken.sol"
-);
+const ERC20 = artifacts.require("./ERC20.sol");
 
 module.exports = async function(deployer, network, accounts) {
   await deployer.deploy(EC);
@@ -12,14 +10,14 @@ module.exports = async function(deployer, network, accounts) {
   if (network !== "mainnet" && network !== "rinkeby") {
     const supply = web3.utils.toBN(web3.utils.toWei("696969", "ether"));
     await deployer.deploy(
-      HumanStandardToken,
+      ERC20,
       supply,
       "Test Token",
       "18",
       "TST"
     );
-    const hst = await HumanStandardToken.deployed();
-    tokenAddress = hst.address;
+    const erc20 = await ERC20.deployed();
+    tokenAddress = erc20.address;
   }
 
   await deployer.link(EC, LC);
