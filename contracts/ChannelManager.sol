@@ -697,8 +697,8 @@ contract ChannelManager {
         _verifyThread(user, sender, receiver, weiBalances, tokenBalances, txCount, proof, sig, bytes32(0x0));
 
         //Unidirectional thread
-        require(WeiBalances[1] > thread.weiBalances[1], "receiver wei balance must always increase");
-        require(TokenBalances[1] > thread.tokenBalances[1], "receiver token balance must always increase");
+        require(weiBalances[1] > thread.weiBalances[1], "receiver wei balance must always increase");
+        require(tokenBalances[1] > thread.tokenBalances[1], "receiver token balance must always increase");
 
         // deduct sender/receiver wei/tokens about to be emptied from the thread from the total channel balances
         channel.weiBalances[2] = channel.weiBalances[2].sub(weiBalances[0]).sub(weiBalances[1]);
