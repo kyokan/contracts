@@ -222,42 +222,6 @@ contract ChannelManager {
             )
         );
 
-        // What if the deposits are made first, and computed as part of the channel.balances first.
-        // { channel.weiBalances[2] = 0.5, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0, 0.5], txCount: [1, 1] }
-        // - what are all the checks that need to be made in order to process a deposit?
-
-        // 1. Do all deposit checks.
-        // 2. Deposit and update onchain values.
-        // 2.5. If the de
-        // 3. Do all withdrawal checks.
-        // 4. Withdraw and update onchain values.
-
-        // Arjun's recommendation:
-        // 1. For all cases, hubDeposit - hubWithdrawal = hubUdate
-        // 2. userUpate = userDeposit - userWithdrawal
-        // 3. If negative, discard (already accounted for in the balance)
-        // TEST - 1: { weiBalances: [0, 10], txCount: [1,1] }
-        // TEST - 2: { weiBalances: [0, 0], userDeposit: 20, userWithdrawal: 30, txCount: [1,1] } <- VALID execute deposit + withdrawal
-        // 4. If positive, new balance = balance + userUpdate
-
-        // Issue - when you deposit and update onchain values, the onchain values do not
-
-        if (pendingWeiUpdates[2] > 0 && pendingWeiUpdates[3] > 0) {
-            require(/* deposit + final balance >= withdrawal*/);
-            weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
-        } else {
-            channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
-        }
-
-        // This makes sense if your deposit + weiBalance >= withdrawal
-        // If you have a state if you want to *move* where the withdrawal is coming from, then we shouldn't assume it was deducted from your wei balance
-
-        // Performer withdrawal + exchange
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [0, 100], txCount: [1, 1] }
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 0.5], txCount: [1, 1] }
-
-
-
         // check user sig against state hash
         require(user == ECTools.recoverSigner(state, sigUser));
 
@@ -280,16 +244,17 @@ contract ChannelManager {
         require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
                 tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
 
-        uint256[2] compiledWeiUpdate;
-        uint256[2] compiledTokenUpdate;
-
+        // If the deposit is greater than the withdrawal, deduct the withdrawal from the deposit amount before adding the deposit to the balances.
+        // Assumes the deposit has *not yet* been added to the balances.
         if (pendingWeiUpdates[0] > pendingWeiUpdates[1]) {
-            compiledWeiUpdate[0] = pendingWeiUpdates[0].sub(pendingWeiUpdates[1]);
+            channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0].sub(pendingWeiUpdates[1]));
+
+        // Otherwise, if the deposit is less than or equal to the withdrawal,
+        // Assumes the deposit has *already* been added to the balances.
         } else {
-            compiledWeiUpdate[0] = 0;
+            channel.weiBalances[0] = weiBalances[0];
         }
 
-        channel.weiBalances[0] = weiBalances[0].add(compiledWeiUpdate[1]);
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
 
         // SIMPLE USER WITHDRAW -> PASS
@@ -298,8 +263,8 @@ contract ChannelManager {
         // ? = .1 + 0 - .4 = -0.3
 
         // Performer withdrawal + exchange -> PASS
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0], tokenBalances: [0, 100], txCount: [1, 1] }
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.1], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.6, 0.5], txCount: [1, 1] }
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.5], tokenBalances: [0, 100], txCount: [1, 1] }
+        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.1], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.6, 0.4], txCount: [1, 1] }
 
         // withdrawal more than you have in channel, if you deposit as well -> PASS
         // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.5], tokenBalances: [0, 100], txCount: [1, 1] }

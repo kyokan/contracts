@@ -60,6 +60,8 @@ Arjun presented a solution which sums up the deposits and withdrawals first, and
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
         recipient.transfer(pendingWeiUpdates[3]);
 
+The key idea here is that the net of deposits + withdrawals is either negative, in which case it is applied offchain (and standard checks should ensure the net >= current balance) or positive, in which case they are only applied onchain. This helps enforce the invariant that the amount in the offchain balances is what is instantaneously available to spend. If the net is negative, then _even if_ the pending txs were to fail for some reason, because it is applied offchain, the user/hub would still not be allowed to spend *more* than their original balance, which the channel would revert to. If the net is -2, and my original balance is 10, then my balance would be updated offchain to be 8, so I wouldn't be able to spend more than 8, which would be fine even if the pending txs failed, because then I would stil have 10. Note that this doesn't apply to pending txs involving exchange, because those have timeouts, and are covered by the hueristic that neither the hub nor user should permit further state updates on a pending state update with a timeout.
+
 Let's see how it does in a few test cases.
 
 Simple withdrawal:
@@ -100,7 +102,7 @@ Performer withdrawal + exchange:
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
         recipient.transfer(pendingWeiUpdates[3]);
 
-And finally, an adapted version of performer exchange + withdrawal where the deposits > withdrawals:
+An adapted version of performer exchange + withdrawal where the deposits > withdrawals:
 
         // update user wei channel balance, account for deposit/withdrawal in reserves
         // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
@@ -118,7 +120,45 @@ And finally, an adapted version of performer exchange + withdrawal where the dep
         channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
         recipient.transfer(pendingWeiUpdates[3]);
-        
 
+An adapted version of performer exchange + withdrawal where the deposits < withdrawals:
 
-Suffice to say, deposits are credited to the balance offchain as part of a state transition that introduces pending operations IF AND ONLY  IF the withdrawal exceeds the deposit amount. If the withdrawal amount exceeds the deposit amount, the onchain calculations will assume that the deposit amount has already been credited to the user's balance and WILL NOT add it again.        
+        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // TEST: { weiBalances: [0, 0.5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 1], txCount: [2, 2] }
+        // NOTE: compiledWeiUpdate[1] -> 0 (deposits are less than withdrawals)
+        // EXPECT: channel.weiBalances[1] -> 0.5
+        // RESULT: channel.weiBalances[1] -> 0.5
+
+        if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
+            compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
+        } else {
+            compiledWeiUpdate[1] = 0;
+        }
+
+        channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+
+And finally, an adapted version of performer exchange + withdrawal where the deposits < withdrawals:
+
+        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
+        // TEST: { weiBalances: [0, .3], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 1.2], txCount: [2, 2] }
+        // NOTE: compiledWeiUpdate[1] -> 0 (deposits are less than withdrawals)
+        // EXPECT: channel.weiBalances[1] -> 1
+        // RESULT: channel.weiBalances[1] -> 1
+
+        if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
+            compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
+        } else {
+            compiledWeiUpdate[1] = 0;
+        }
+
+        channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        recipient.transfer(pendingWeiUpdates[3]);
+
+Suffice to say, deposits are credited to the balance offchain as part of a state transition that introduces pending operations IF AND ONLY IF the withdrawal exceeds the deposit amount. If the withdrawal amount exceeds the deposit amount, the onchain calculations will assume that the deposit amount has already been credited to the user's balance and WILL NOT add it again.
+
+In Arjun's words: The reason I think it works is: EITHER your delta is positive, in which case you add it onchain as a deposit OR your delta is negative in which case you add it offchain before you submit.
