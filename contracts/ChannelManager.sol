@@ -535,14 +535,14 @@ contract ChannelManager {
         // transfer hub wei balance from channel to reserves
         totalChannelWei = totalChannelWei.sub(channel.weiBalances[0]).sub(channel.weiBalances[1]);
         // transfer user wei balance to user
-        user[0].transfer(channel.weiBalances[1]);
+        user.transfer(channel.weiBalances[1]);
         channel.weiBalances[0] = 0;
         channel.weiBalances[1] = 0;
 
         // transfer hub token balance from channel to reserves
         totalChannelToken = totalChannelToken.sub(channel.tokenBalances[0]).sub(channel.tokenBalances[1]);
         // transfer user token balance to user
-        require(approvedToken.transfer(user[0], channel.tokenBalances[1]), "user token withdrawal transfer failed");
+        require(approvedToken.transfer(user, channel.tokenBalances[1]), "user token withdrawal transfer failed");
         channel.tokenBalances[0] = 0;
         channel.tokenBalances[1] = 0;
 
@@ -643,7 +643,7 @@ contract ChannelManager {
         require(updatedTokenBalances[1] > tokenBalances[1], "receiver token balance must always increase");
 
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
-        _verifyThread(user, threadMembers[0], threadMembers[1], updatedWeiBalances, updatedTokenBalances, updatedTxCount, proof, sig, bytes32(0x0));
+        _verifyThread(user, threadMembers[0], threadMembers[1], updatedWeiBalances, updatedTokenBalances, updatedTxCount, "", sig, bytes32(0x0));
 
         thread.weiBalances = updatedWeiBalances;
         thread.tokenBalances = updatedTokenBalances;
@@ -661,7 +661,6 @@ contract ChannelManager {
         );
     }
 
-    // TODO - get rid of proof
     // non-sender can empty anytime with a state update after startExitThread/WithUpdate is called
     function fastEmptyThread(
         address user,
@@ -670,7 +669,6 @@ contract ChannelManager {
         uint256[2] weiBalances,
         uint256[2] tokenBalances,
         uint256 txCount,
-        bytes proof,
         string sig
     ) public noReentrancy {
         Channel storage channel = channels[user];
@@ -686,11 +684,11 @@ contract ChannelManager {
         require(weiBalances[0].add(weiBalances[1]) == thread.weiBalances[0].add(thread.weiBalances[1]), "updated wei balances must match sum of thread wei balances");
         require(tokenBalances[0].add(tokenBalances[1]) == thread.tokenBalances[0].add(thread.tokenBalances[1]), "updated token balances must match sum of thread token balances");
 
-        require(updatedWeiBalances[1] > weiBalances[1], "receiver wei balance must always increase");
-        require(updatedTokenBalances[1] > tokenBalances[1], "receiver token balance must always increase");
+        require(weiBalances[1] > thread.weiBalances[1], "receiver wei balance must always increase");
+        require(tokenBalances[1] > thread.tokenBalances[1], "receiver token balance must always increase");
 
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
-        _verifyThread(user, sender, receiver, weiBalances, tokenBalances, txCount, proof, sig, bytes32(0x0));
+        _verifyThread(user, sender, receiver, weiBalances, tokenBalances, txCount, "", sig, bytes32(0x0));
 
         //Unidirectional thread
         require(weiBalances[1] > thread.weiBalances[1], "receiver wei balance must always increase");
