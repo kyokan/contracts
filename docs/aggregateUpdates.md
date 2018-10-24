@@ -6,6 +6,8 @@
 4) if pending withdrawal = 0 and deposit > 0 then submit the previous state balance
 ```
 
+# Aggregate Updates
+
 Arjun did a great job of pointing out the following edge case:
 
 Normally, you deduct the withdrawal in advance from the offchain balances:
