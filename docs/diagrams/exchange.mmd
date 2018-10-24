@@ -12,7 +12,8 @@ sequenceDiagram
     participant Contract
 
 
-    Note over User: Decides to exchange <br> 69 wei for 69 BOOTY
+    Note over User: Decides to exchange <br> 69 wei for 69 BOOTY.<br>Initial State: { <br>weiBalances: [0, 69],<br>tokenBalances: [69, 0]<br>txCount: [1, 1] }
+
 
     User->>Hub: Proposes Exchange
     Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1], <br> timeout: 156700391, <br>sigA: 0xac3f }
