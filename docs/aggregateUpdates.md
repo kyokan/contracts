@@ -155,8 +155,8 @@ And finally, an adapted version of performer exchange + withdrawal where the dep
         // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
         // TEST: { weiBalances: [0, .3], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 1.2], txCount: [2, 2] }
         // NOTE: compiledWeiUpdate[1] -> 0 (deposits are less than withdrawals)
-        // EXPECT: channel.weiBalances[1] -> 1
-        // RESULT: channel.weiBalances[1] -> 1
+        // EXPECT: channel.weiBalances[1] -> 0.3
+        // RESULT: channel.weiBalances[1] -> 0.3
 
         if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
             compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
