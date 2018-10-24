@@ -212,8 +212,7 @@ contract ChannelManager {
         );
 
         _verifySig(
-            user,
-            recipient,
+            [user, recipient],
             weiBalances,
             tokenBalances,
             pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
@@ -279,8 +278,7 @@ contract ChannelManager {
         );
 
         _verifySig(
-            msg.sender,
-            recipient,
+            [msg.sender, recipient],
             weiBalances,
             tokenBalances,
             pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
@@ -368,7 +366,6 @@ contract ChannelManager {
         uint256[2] balances,
         uint256[4] pendingUpdates
     ) internal {
-
         // update hub balance
         // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
         // Assumes the net has *not yet* been added to the balances.
@@ -398,27 +395,23 @@ contract ChannelManager {
         uint256[2] balances,
         uint256[4] pendingUpdates
     ) internal {
-        if (pendingWeiUpdates[0] > pendingWeiUpdates[1]) {
-            channel.weiBalances[0] = weiBalances[0];
+        // If the pending update has NOT been executed AND deposits > withdrawals, offchain state was NOT updated with delta, and is thus correct
+        if (pendingUpdates[0] > pendingUpdates[1]) {
+            channelBalances[0] = balances[0];
 
-        // 2: { weiBalances: [100, 100] }
-        // 2: { weiBalances: [100, 50], pendingWeiUpdates: [0, 0, 50, 100] } <- deposit < withdrawal, add delta
-        // 2: { weiBalances: [110, 40], pendingWeiUpdates: [0, 0, 50, 100] } <- user pays hub [OFFCHAIN UPDATE]
-        // 2: { weiBalances: [110, 90] <- final (revert delta)
-        // If the tx has already been executed AND deposits < withdrawals, offchain state should have been updated with delta, and must be reverted
-        else {
-            channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[1].sub(pendingWeiUpdates[0])); // <- add withdrawal, sub deposit
+        // If the pending update has NOT been executed AND deposits < withdrawals, offchain state should have been updated with delta, and must be reverted
+        } else {
+            channelBalances[0] = balances[0].add(pendingUpdates[1].sub(pendingUpdates[0])); // <- add withdrawal, sub deposit (opposite order as _applyPendingUpdates)
         }
 
-        // If the tx has already been executed AND deposits > withdrawals, offchain state was NOT updated with delta, and is thus correct
-        if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
-            channel.weiBalances[1] = weiBalances[1];
+        // If the pending update has NOT been executed AND deposits > withdrawals, offchain state was NOT updated with delta, and is thus correct
+        if (pendingUpdates[2] > pendingUpdates[3]) {
+            channelBalances[1] = balances[1];
 
-        // If the tx has already been executed AND deposits > withdrawals, offchain state should have been updated with delta, and must be reverted
-        else {
-            channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[3].sub(pendingWeiUpdates[2]));
+        // If the pending update has NOT been executed AND deposits > withdrawals, offchain state should have been updated with delta, and must be reverted
+        } else {
+            channelBalances[1] = balances[1].add(pendingUpdates[3].sub(pendingUpdates[2])); // <- add withdrawal, sub deposit (opposite order as _applyPendingUpdates)
         }
-
     }
 
     function _updateChannelBalances(
@@ -469,8 +462,7 @@ contract ChannelManager {
 
     // start exit with offchain state
     function startExitWithUpdate(
-        address user,
-        address recipient,
+        address[2] user, // [user, recipient]
         uint256[2] weiBalances, // [hub, user]
         uint256[2] tokenBalances, // [hub, user]
         uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
@@ -482,16 +474,15 @@ contract ChannelManager {
         string sigHub,
         string sigUser
     ) public noReentrancy {
-        Channel storage channel = channels[user];
+        Channel storage channel = channels[user[0]];
         require(channel.status == Status.Open, "channel must be open");
 
-        require(msg.sender == hub || msg.sender == user, "exit initiator must be user or hub");
+        require(msg.sender == hub || msg.sender == user[0], "exit initiator must be user or hub");
 
         require(timeout == 0, "can't start exit with time-sensitive states");
 
         _verifySig(
             user,
-            recipient,
             weiBalances,
             tokenBalances,
             pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
@@ -513,63 +504,12 @@ contract ChannelManager {
 
         // pending onchain txs have been executed - force update offchain state to reflect this
         if (txCount[1] == channel.txCount[1]) {
-            // 1: { weiBalances: [100, 100] }
-            // 1: { weiBalances: [100, 100], pendingWeiUpdates: [0, 0, 100, 50] } <- deposit > withdrawal, don't add delta [COMMITTED ONCHAIN]
-            // 1: { weiBalances: [110, 90], pendingWeiUpdates: [0, 0, 100, 50] } <- user pays hub [OFFCHAIN UPDATE]
-            // 1: { weiBalances: [110, 140] } <- final
-            // If the tx has already been executed AND deposits > withdrawals, offchain state was NOT updated with delta, and must be updated
-            if (pendingWeiUpdates[0] > pendingWeiUpdates[1]) {
-                channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0].sub(pendingWeiUpdates[1]));
-
-            // 2: { weiBalances: [100, 100] }
-            // 2: { weiBalances: [100, 50], pendingWeiUpdates: [0, 0, 50, 100] } <- deposit < withdrawal, add delta [COMMITTED ONCHAIN]
-            // 2: { weiBalances: [110, 40], pendingWeiUpdates: [0, 0, 50, 100] } <- user pays hub [OFFCHAIN UPDATE]
-            // 2: { weiBalances: [110, 40] <- final
-            // If the tx has already been executed AND deposits < withdrawals, offchain state should have been updated with delta, and is thus correct
-            else {
-                channel.weiBalances[0] = weiBalances[0];
-            }
-
-            // If the tx has already been executed AND deposits < withdrawals, offchain state should have been updated with delta, and is thus correct
-            if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
-                channel.weiBalances[1] = weiBalances[1];
-
-            // If the tx has already been executed AND deposits > withdrawals, offchain state was NOT updated with delta, and must be updated
-            else {
-                channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2].sub(pendingWeiUpdates[3]));
-            }
-
-            // TODO do the same in tokens
-
-        // pending onchain txs have *not* been executed - revert pending withdrawals back into offchain balances
+            _applyPendingUpdates(channel.weiBalances, weiBalances, pendingWeiUpdates);
+            _applyPendingUpdates(channel.tokenBalances, tokenBalances, pendingTokenUpdates);
+        // pending onchain txs have *not* been executed - revert pending deposits and withdrawals back into offchain balances
         } else { //txCount[1] > channel.txCount[1]
-            // 1: { weiBalances: [100, 100] }
-            // 1: { weiBalances: [100, 100], pendingWeiUpdates: [0, 0, 100, 50] } <- deposit > withdrawal, don't add delta
-            // 1: { weiBalances: [110, 90], pendingWeiUpdates: [0, 0, 100, 50] } <- user pays hub [OFFCHAIN UPDATE]
-            // 1: { weiBalances: [110, 90] } <- final (don't apply pending updates)
-            // If the tx has NOT been executed AND deposits > withdrawals, offchain state was NOT updated with delta, and is thus correct
-            if (pendingWeiUpdates[0] > pendingWeiUpdates[1]) {
-                channel.weiBalances[0] = weiBalances[0];
-
-            // 2: { weiBalances: [100, 100] }
-            // 2: { weiBalances: [100, 50], pendingWeiUpdates: [0, 0, 50, 100] } <- deposit < withdrawal, add delta
-            // 2: { weiBalances: [110, 40], pendingWeiUpdates: [0, 0, 50, 100] } <- user pays hub [OFFCHAIN UPDATE]
-            // 2: { weiBalances: [110, 90] <- final (revert delta)
-            // If the tx has already been executed AND deposits < withdrawals, offchain state should have been updated with delta, and must be reverted
-            else {
-                channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[1].sub(pendingWeiUpdates[0])); // <- add withdrawal, sub deposit
-            }
-
-            // If the tx has already been executed AND deposits > withdrawals, offchain state was NOT updated with delta, and is thus correct
-            if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
-                channel.weiBalances[1] = weiBalances[1];
-
-            // If the tx has already been executed AND deposits > withdrawals, offchain state should have been updated with delta, and must be reverted
-            else {
-                channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[3].sub(pendingWeiUpdates[2]));
-            }
-
-            // TODO do the same in tokens
+            _revertPendingUpdates(channel.weiBalances, weiBalances, pendingWeiUpdates);
+            _revertPendingUpdates(channel.tokenBalances, tokenBalances, pendingTokenUpdates);
         }
 
         // update state variables
@@ -582,7 +522,7 @@ contract ChannelManager {
         channel.status == Status.ChannelDispute;
 
         emit DidStartExitChannel(
-            user,
+            user[0],
             msg.sender == hub ? 0 : 1,
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
@@ -594,7 +534,7 @@ contract ChannelManager {
 
     // party that didn't start exit can challenge and empty
     function emptyChannelWithChallenge(
-        address user,
+        address[2] user,
         uint256[2] weiBalances, // [hub, user]
         uint256[2] tokenBalances, // [hub, user]
         uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
@@ -606,34 +546,28 @@ contract ChannelManager {
         string sigHub,
         string sigUser
     ) public noReentrancy {
-        Channel storage channel = channels[user];
+        Channel storage channel = channels[user[0]];
         require(channel.status == Status.ChannelDispute, "channel must be in dispute");
         require(now < channel.channelClosingTime, "channel closing time must not have passed");
 
         require(msg.sender != channel.exitInitiator, "challenger can not be exit initiator");
-        require(msg.sender == hub || msg.sender == user, "challenger must be either user or hub");
+        require(msg.sender == hub || msg.sender == user[0], "challenger must be either user or hub");
 
         require(timeout == 0, "can't start exit with time-sensitive states");
 
-        // prepare state hash to check hub sig
-        bytes32 state = keccak256(
-            abi.encodePacked(
-                address(this),
-                user,
-                weiBalances, // [hub, user]
-                tokenBalances, // [hub, user]
-                pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-                pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
-                txCount, // persisted onchain even when empty
-                threadRoot,
-                threadCount,
-                timeout
-            )
+        _verifySig(
+            user,
+            weiBalances,
+            tokenBalances,
+            pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+            pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+            txCount,
+            threadRoot,
+            threadCount,
+            timeout,
+            sigHub,
+            sigUser
         );
-
-        // check hub and user sigs against state hash
-        require(hub == ECTools.recoverSigner(state, sigHub));
-        require(user == ECTools.recoverSigner(state, sigUser));
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
         require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
@@ -642,20 +576,14 @@ contract ChannelManager {
         require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
         require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
 
-        // TODO UPDATE WITH pre-compiling deposits + withdrawals
         // pending onchain txs have been executed - force update offchain state to reflect this
         if (txCount[1] == channel.txCount[1]) {
-            weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0]);
-            weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
-            tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[0]);
-            tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[2]);
-
-        // pending onchain txs have *not* been executed - revert pending withdrawals back into offchain balances
+            _applyPendingUpdates(channel.weiBalances, weiBalances, pendingWeiUpdates);
+            _applyPendingUpdates(channel.tokenBalances, tokenBalances, pendingTokenUpdates);
+        // pending onchain txs have *not* been executed - revert pending deposits and withdrawals back into offchain balances
         } else { //txCount[1] > channel.txCount[1]
-            weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[1]);
-            weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[3]);
-            tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[1]);
-            tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[3]);
+            _revertPendingUpdates(channel.weiBalances, weiBalances, pendingWeiUpdates);
+            _revertPendingUpdates(channel.tokenBalances, tokenBalances, pendingTokenUpdates);
         }
 
         // deduct hub/user wei/tokens from total channel balances
@@ -668,7 +596,7 @@ contract ChannelManager {
 
         // transfer user wei balance to user
         totalChannelWei = totalChannelWei.sub(channel.weiBalances[1]);
-        user.transfer(channel.weiBalances[1]);
+        user[0].transfer(channel.weiBalances[1]);
         channel.weiBalances[1] = 0;
 
         // transfer hub token balance from channel to reserves
@@ -677,7 +605,7 @@ contract ChannelManager {
 
         // transfer user token balance to user
         totalChannelToken = totalChannelToken.sub(channel.tokenBalances[1]);
-        require(approvedToken.transfer(user, channel.tokenBalances[1]), "user token withdrawal transfer failed");
+        require(approvedToken.transfer(user[0], channel.tokenBalances[1]), "user token withdrawal transfer failed");
         channel.tokenBalances[1] = 0;
 
         // update state variables
@@ -698,7 +626,7 @@ contract ChannelManager {
 
 
         emit DidEmptyChannelWithChallenge(
-            user,
+            user[0],
             msg.sender == hub ? 0 : 1,
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
@@ -1070,8 +998,7 @@ contract ChannelManager {
     }
 
     function _verifySig (
-        address user,
-        address recipient,
+        address[2] user,
         uint256[2] weiBalances, // [hub, user]
         uint256[2] tokenBalances, // [hub, user]
         uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
