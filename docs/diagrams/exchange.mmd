@@ -8,12 +8,17 @@ sequenceDiagram
     participant Contract
 
 
-    Note over User: Decides to exchange <br> 69 wei for 69 BOOTY.<br>Initial State: { <br>weiBalances: [0, 69],<br>tokenBalances: [69, 0]<br>txCount: [1, 1] }
+    Note over User: Decides to exchange <br> 69 wei for 69 BOOTY.
 
 
     User->>Hub: Proposes Exchange
-    Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1], <br>sigA: 0xac3f }<br><br> timeout: 156700391 (offchain)
+    Note over User,Hub: { desiredCurrency: 'BOOTY',<br>exchangeAmount: 69,<br>txCount: 1 }
 
+Hub->>User: Proposed, unsigned state update
+Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1],<br><br> timeout: 156700391 } (offchain)
+
+User->>Hub: Verified, signed state update
+Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1] <br><br> timeout: 156700391,<br>sigA: 0xac3f} (offchain)
     User-->User: Start Offchain Timer
 
     alt Hub responds in time
