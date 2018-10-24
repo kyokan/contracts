@@ -244,77 +244,56 @@ contract ChannelManager {
         require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
                 tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
 
-        // If the deposit is greater than the withdrawal, deduct the withdrawal from the deposit amount before adding the deposit to the balances.
+        // update hub wei balance
+        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
         // Assumes the deposit has *not yet* been added to the balances.
         if (pendingWeiUpdates[0] > pendingWeiUpdates[1]) {
             channel.weiBalances[0] = weiBalances[0].add(pendingWeiUpdates[0].sub(pendingWeiUpdates[1]));
-
         // Otherwise, if the deposit is less than or equal to the withdrawal,
         // Assumes the deposit has *already* been added to the balances.
         } else {
             channel.weiBalances[0] = weiBalances[0];
         }
 
-        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[0]).sub(pendingWeiUpdates[1]);
-
-        // SIMPLE USER WITHDRAW -> PASS
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.5], txCount: [1, 1] }
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.1], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0, 0.4], txCount: [2, 2] }
-        // ? = .1 + 0 - .4 = -0.3
-
-        // Performer withdrawal + exchange -> PASS
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.5], tokenBalances: [0, 100], txCount: [1, 1] }
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.1], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.6, 0.4], txCount: [1, 1] }
-
-        // withdrawal more than you have in channel, if you deposit as well -> PASS
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.5], tokenBalances: [0, 100], txCount: [1, 1] }
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.2], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.3, 0.6], txCount: [1, 2] }
-
-        // TODO possibly update the deposit variable in-place to deduct the withdrawal amount
-        // IF A DEPOSIT IS AVAILABLE, WITHDRAW FROM THE DEPOSIT BEFORE WITHDRAWING FROM CHANNEL BALANCE
-
-        uint256[2] compiledWeiUpdate; // [hubUpdate, userUpdate]
+        // update user wei balance
+        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
+        // Assumes the deposit has *not yet* been added to the balances.
         if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
-            compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
+            channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2].sub(pendingWeiUpdates[3]));
+
+        // Otherwise, if the deposit is less than or equal to the withdrawal,
+        // Assumes the deposit has *already* been added to the balances.
         } else {
-            compiledWeiUpdate[1] = 0;
+            channel.weiBalances[1] = weiBalances[1];
         }
 
-        channel.weiBalances[1] = weiBalances[1].add(compiledWeiUpdate[1]);
-        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        totalChannelWei = totalChannelWei.add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[1]).sub(pendingWeiUpdates[3]);
         recipient.transfer(pendingWeiUpdates[3]);
 
-        // The reason this is happening is because in the special case of the hub depositing on the user's behalf, the user's withdrawal is being accounted for from the hub's
-        // deposit, not the balances. Normally, you deduct the withdrawal from the balances, which is why this breaks the normal flow.
-        // This would also be fine if the user's balance is *above* the withdrawal amount - the edge case is when the user's balance is *below* the withdrawal amount.
+        // update hub token balance
+        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
+        // Assumes the deposit has *not yet* been added to the balances.
+        if (pendingTokenUpdates[0] > pendingTokenUpdates[1]) {
+            channel.tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[0].sub(pendingTokenUpdates[1]));
+        // Otherwise, if the deposit is less than or equal to the withdrawal,
+        // Assumes the deposit has *already* been added to the balances.
+        } else {
+            channel.tokenBalances[0] = tokenBalances[0];
+        }
 
-        // Performer withdrawal + exchange
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.6, 0.5], txCount: [1, 1] }
-        // .5 + .6 - .5 = .6
-        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
+        // update user token balance
+        // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
+        // Assumes the deposit has *not yet* been added to the balances.
+        if (pendingTokenUpdates[2] > pendingTokenUpdates[3]) {
+            channel.tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[2].sub(pendingTokenUpdates[3]));
 
-        // update user wei channel balance, account for deposit/withdrawal in reserves
-        // TODO - this doesn't work, channel.weiBalances[1] would be 0.5 instead of 0
-        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
+        // Otherwise, if the deposit is less than or equal to the withdrawal,
+        // Assumes the deposit has *already* been added to the balances.
+        } else {
+            channel.tokenBalances[1] = tokenBalances[1];
+        }
 
-        // ? = .1 + .6 - .5 = .2
-        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
-
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.5], txCount: [1, 1] }
-        // { channel.weiBalances[2] = 0, channel.tokenBalances[2] = 100, weiBalances: [0, 0.1], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0, 0.4], txCount: [1, 1] }
-        // ? = .1 + 0 - .4 = -0.3
-        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
-
-        // THE REST OF THE STUFF
-
-        // update hub token channel balance, account for deposit/withdrawal in reserves
-        channel.tokenBalances[0] = tokenBalances[0].add(pendingTokenUpdates[0]).sub(pendingTokenUpdates[1]);
-        totalChannelToken = totalChannelToken.add(pendingTokenUpdates[0]).sub(pendingTokenUpdates[1]);
-
-        // update user token channel balance, account for deposit/withdrawal in reserves
-        channel.tokenBalances[1] = tokenBalances[1].add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[3]);
-        totalChannelToken = totalChannelToken.add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[3]);
+        totalChannelToken = totalChannelToken.add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[1]).sub(pendingTokenUpdates[3]);
         require(approvedToken.transfer(recipient, pendingTokenUpdates[3]), "user token withdrawal transfer failed");
 
         // update channel total balances
