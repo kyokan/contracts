@@ -2,7 +2,7 @@
 ```
 1) if pending withdrawal > 0 and deposit = 0 then decrement the balance by withdrawal amount
 2) if pending withdrawal > 0 and deposit > 0 and deposit > withdrawal then submit the previous state balance
-3) if pending withdrawal > 0 and deposit > 0 and deposit < withdrawal, decrement the balance by (withdrawal - deposit)
+3) if pending withdrawal > 0 and deposit > 0 and deposit <= withdrawal, decrement the balance by (withdrawal - deposit)
 4) if pending withdrawal = 0 and deposit > 0 then submit the previous state balance
 ```
 
@@ -50,7 +50,7 @@ However, this would fail for the initial simple withdrawal case:
         // TEST { weiBalances: [0, .5], tokenBalances: [0, 100], pendingWeiUpdates: [0, 0, 0, 0.5], txCount: [2, 2] }
         // EXPECT: channel.weiBalances[1] -> 0.5
         // RESULT: channel.weiBalances[1] -> 0
-        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]);
+        channel.weiBalances[1] = weiBalances[1].add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]); // <- SUBTRACT WITHDRAWAL
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
         recipient.transfer(pendingWeiUpdates[3]);
 
@@ -74,7 +74,7 @@ Let's see how it does in a few test cases.
 
 Simple withdrawal:
 
-        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // 1) if pending withdrawal > 0 and deposit = 0 then decrement the balance by withdrawal amount
         // INIT { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
         // TEST { weiBalances: [0, .5], tokenBalances: [0, 100], pendingWeiUpdates: [0, 0, 0, 0.5], txCount: [2, 2] }
         // NOTE: compiledWeiUpdate[1] -> 0 (deposits are less than withdrawals)
@@ -91,9 +91,9 @@ Simple withdrawal:
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
         recipient.transfer(pendingWeiUpdates[3]);
 
-Performer withdrawal + exchange:
+Performer withdrawal + exchange where deposits = withdrawals:
 
-        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // 3) if pending withdrawal > 0 and deposit > 0 and deposit <= withdrawal, decrement the balance by (withdrawal - deposit)
         // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
         // TEST: { weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 0.5], txCount: [2, 2] }
         // NOTE: compiledWeiUpdate[1] -> 0 (deposits are equal to withdrawals)
@@ -112,12 +112,13 @@ Performer withdrawal + exchange:
 
 An adapted version of performer exchange + withdrawal where the deposits > withdrawals:
 
-        // update user wei channel balance, account for deposit/withdrawal in reserves
+
+        // 2) if pending withdrawal > 0 and deposit > 0 and deposit > withdrawal then submit the previous state balance
         // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
-        // TEST: { weiBalances: [0, .5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 1, 0.5], txCount: [2, 2] }
+        // TEST: { weiBalances: [0, 1], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 1, 0.5], txCount: [2, 2] }
         // NOTE: compiledWeiUpdate[1] -> 0.5 (deposits are greater than withdrawals)
-        // EXPECT: channel.weiBalances[1] -> 1
-        // RESULT: channel.weiBalances[1] -> 1
+        // EXPECT: channel.weiBalances[1] -> 1.5
+        // RESULT: channel.weiBalances[1] -> 1.5
 
         if (pendingWeiUpdates[2] > pendingWeiUpdates[3]) {
             compiledWeiUpdate[1] = pendingWeiUpdates[2].sub(pendingWeiUpdates[3]);
@@ -131,7 +132,7 @@ An adapted version of performer exchange + withdrawal where the deposits > withd
 
 An adapted version of performer exchange + withdrawal where the deposits < withdrawals:
 
-        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // 3) if pending withdrawal > 0 and deposit > 0 and deposit <= withdrawal, decrement the balance by (withdrawal - deposit)
         // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
         // TEST: { weiBalances: [0, 0.5], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 1], txCount: [2, 2] }
         // NOTE: compiledWeiUpdate[1] -> 0 (deposits are less than withdrawals)
@@ -148,9 +149,9 @@ An adapted version of performer exchange + withdrawal where the deposits < withd
         totalChannelWei = totalChannelWei.add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
         recipient.transfer(pendingWeiUpdates[3]);
 
-And finally, an adapted version of performer exchange + withdrawal where the deposits < withdrawals:
+And finally, an adapted version of performer exchange + withdrawal where the deposits < withdrawals, and the withdrawal > initial balance:
 
-        // update user wei channel balance, account for deposit/withdrawal in reserves
+        // 3) if pending withdrawal > 0 and deposit > 0 and deposit < withdrawal, decrement the balance by (withdrawal - deposit)
         // INIT: { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
         // TEST: { weiBalances: [0, .3], tokenBalances: [100, 0], pendingWeiUpdates: [0, 0, 0.5, 1.2], txCount: [2, 2] }
         // NOTE: compiledWeiUpdate[1] -> 0 (deposits are less than withdrawals)
