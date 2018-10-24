@@ -1,5 +1,7 @@
 "use strict";
-console.log(__dirname)
+const HttpProvider = require(`ethjs-provider-http`)
+const EthRPC = require(`ethjs-rpc`)
+const ethRPC = new EthRPC(new HttpProvider('http://localhost:8545'))
 const Utils = require("./helpers/utils");
 const Ledger = artifacts.require("./ChannelManager.sol");
 const EC = artifacts.require("./ECTools.sol");
@@ -22,6 +24,20 @@ function wait(ms) {
   console.log(`Waiting for ${ms}ms...`);
   while (Date.now() < start + ms) {}
   return true;
+}
+
+async function moveForwardSecs(secs) {
+  await ethRPC.sendAsync({
+    jsonrpc:'2.0', method: `evm_increaseTime`,
+    params: [secs],
+    id: 0
+  }, (err)=> {`error increasing time`});
+  await ethRPC.sendAsync({method: `evm_mine`}, (err)=> {});
+  return true
+}
+
+async function forceMine() {
+  return await ethRPC.sendAsync({method: `evm_mine`}, (err)=> {});
 }
 
 function generateProof(vcHashToProve, vcInitStates) {
@@ -79,7 +95,7 @@ contract("ChannelManager::constructor", accounts => {
     challengePeriod = await channelManager.challengePeriod()
     approvedToken = await channelManager.approvedToken()
   })
-
+  
   describe('contract deployment', () => {
     it("verify initialized parameters", async() => {
       assert.equal(hubAddress, accounts[0])
@@ -94,7 +110,7 @@ contract("ChannelManager::hubContractWithdraw", accounts => {
 
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('hubContractWithdraw', () => {
     it("happy case", async() => {
@@ -134,7 +150,7 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
     it("happy case", async() => {
       init.sigUser = await initHash(channelManager, init)
       await channelManager.hubAuthorizedUpdate(
-        init.user,
+        init.user, 
         init.recipient,
         init.weiBalances,
         init.tokenBalances,
@@ -150,13 +166,12 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
   })
 });
 
-
 contract("ChannelManager::userAuthorizedUpdate", accounts => {
   let channelManager
 
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('userAuthorizedUpdate', () => {
     let hash, init
@@ -173,7 +188,7 @@ contract("ChannelManager::userAuthorizedUpdate", accounts => {
         "threadCount" : 0,
         "timeout" : 0
       }
-    })
+    })  
 
     it("happy case", async() => {
       init.sigUser = await initHash(channelManager, init)
@@ -192,13 +207,13 @@ contract("ChannelManager::userAuthorizedUpdate", accounts => {
     })
   })
 });
-
+  
 
 contract("ChannelManager::startExit", accounts => {
   let channelManager
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('startExit', () => {
     it("happy case", async() => {
@@ -214,7 +229,7 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
   let channelManager, init
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   beforeEach(async () => {
     init = {
@@ -228,7 +243,7 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
       "threadCount" : 0,
       "timeout" : 0
     }
-  })
+  })  
 
   describe('startExitWithUpdate', () => {
     it("happy case", async() => {
@@ -249,9 +264,9 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
 
       init.sigHub = signatureHub.signature
       init.sigUser = signatureUser.signature
-
+      
       await channelManager.startExitWithUpdate(
-        init.user,
+        init.user, 
         init.weiBalances,
         init.tokenBalances,
         init.pendingWeiUpdates,
@@ -266,33 +281,83 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
     })
   })
 });
-/*
 
-// TODO
 contract("ChannelManager::emptyChannelWithChallenge", accounts => {
-  let channelManager
+  let channelManager, init
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
+
+  beforeEach(async () => {
+    init = {
+      "user" : [accounts[1], accounts[1]],
+      "weiBalances" : [0, 0],
+      "tokenBalances" : [0, 0],
+      "pendingWeiUpdates" : [0, 0, 0, 0],
+      "pendingTokenUpdates" : [0, 0, 0, 0],
+      "txCount" : [1,1],
+      "threadRoot" : emptyRootHash,
+      "threadCount" : 0,
+      "timeout" : 0
+    }
+  })  
 
   describe('emptyChannelWithChallenge', () => {
     it("happy case", async() => {
+      const hash = await web3.utils.soliditySha3(
+        channelManager.address,
+        {type: 'address[2]', value: init.user},
+        {type: 'uint256[2]', value: init.weiBalances},
+        {type: 'uint256[2]', value: init.tokenBalances},
+        {type: 'uint256[4]', value: init.pendingWeiUpdates},
+        {type: 'uint256[4]', value: init.pendingTokenUpdates},
+        {type: 'uint256[2]', value: init.txCount},
+        {type: 'bytes32', value: init.threadRoot},
+        init.threadCount,
+        init.timeout
+      )
+      const signatureHub = await web3.eth.accounts.sign(hash, privKeys[0])
+      const signatureUser = await web3.eth.accounts.sign(hash, privKeys[1])
+
+      init.sigHub = signatureHub.signature
+      init.sigUser = signatureUser.signature
+      
+      await channelManager.startExit(
+        accounts[1]
+      )
+
       await channelManager.emptyChannelWithChallenge(
-        accounts[0]
+        init.user, 
+        init.weiBalances,
+        init.tokenBalances,
+        init.pendingWeiUpdates,
+        init.pendingTokenUpdates,
+        init.txCount,
+        init.threadRoot,
+        init.threadCount,
+        init.timeout,
+        init.sigHub,
+        init.sigUser, 
+        {from: accounts[1]}
       )
     })
   })
 });
 
-// TODO
+
 contract("ChannelManager::emptyChannel", accounts => {
   let channelManager
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('emptyChannel', () => {
     it("happy case", async() => {
+      await channelManager.startExit(
+        accounts[0]
+      )
+      await moveForwardSecs(99999)
+      await forceMine()
       await channelManager.emptyChannel(
         accounts[0]
       )
@@ -300,12 +365,14 @@ contract("ChannelManager::emptyChannel", accounts => {
   })
 });
 
+/*
+
 // TODO
 contract("ChannelManager::startExitThread", accounts => {
   let channelManager
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('startExitThread', () => {
     it("happy case", async() => {
@@ -321,7 +388,7 @@ contract("ChannelManager::startExitThreadWithUpdate", accounts => {
   let channelManager
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('startExitThreadWithUpdate', () => {
     it("happy case", async() => {
@@ -337,7 +404,7 @@ contract("ChannelManager::fastEmptyThread", accounts => {
   let channelManager
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('fastEmptyThread', () => {
     it("happy case", async() => {
@@ -353,7 +420,7 @@ contract("ChannelManager::emptyThread", accounts => {
   let channelManager
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('emptyThread', () => {
     it("happy case", async() => {
@@ -369,7 +436,7 @@ contract("ChannelManager::nukeThreads", accounts => {
   let channelManager
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-  })
+  })  
 
   describe('nukeThreads', () => {
     it("happy case", async() => {
