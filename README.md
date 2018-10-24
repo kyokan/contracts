@@ -1,5 +1,3 @@
-(Fully updated 10/24/2018)
-
 # DOCUMENT FOR CONTRACT SPEC
 
 Canonical links: [https://paper.dropbox.com/doc/SpankPay-BOOTY-Drop-2-CANONICAL-URLs--AP7jZj1zm4J7XSVcw0Ifk_fBAg-Qpw2NAWgCIdg0Z5G9lpSu](https://paper.dropbox.com/doc/SpankPay-BOOTY-Drop-2-CANONICAL-URLs--AP7jZj1zm4J7XSVcw0Ifk_fBAg-Qpw2NAWgCIdg0Z5G9lpSu)
@@ -169,7 +167,8 @@ Note: the flow is the same regardless of whether or not there is a balance in th
 1. User decides how much they want to deposit
 2. User requests the hub to send a state update with the deposit amount included as a pending deposit.
     - The Hub may also chose to include ETH or tokens as part of the deposit, which could later be exchanged offchain. For example, if the user is depositing 1 ETH, the hub may chose to deposit 69 BOOTY.
-
+    
+```
         // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
         pendingWeiUpdates: [0, 0, 1 eth, 0]
         pendingTokenUpdates: [69 booty, 0, 0, 0]
@@ -177,8 +176,10 @@ Note: the flow is the same regardless of whether or not there is a balance in th
         tokenBalances: [0, 0]
         txCount: [1, 1]
         timeout: currentBlockTime + 5 minutes
+```
 
-    - Note that a timeout is included in all user deposits - regardless of whether or not the hub is making a deposit - to ensure that the channel isn't left in limbo if the onchain transaction can't succeed. For more details, see the "Time-Sensitive Operations and Timeouts" heading.
+Note that a timeout is included in all user deposits - regardless of whether or not the hub is making a deposit - to ensure that the channel isn't left in limbo if the onchain transaction can't succeed. For more details, see the "Time-Sensitive Operations and Timeouts" heading.
+
 3. The user counter-signs the state update from the hub, then publishes to chain, along with the requisite payment (ie, the value of `pendingWeiUpdates[3]`.
 4. Once the onchain transaction has been confirmed, either party may propose a state update moving the pending deposits into balances.
 
@@ -194,7 +195,7 @@ For example, if the state published to the chain was:
         txCount: [1, 1]
         timeout: currentBlockTime + 5 minutes
 
-    Then, after the transaction has been confirmed, an offchain update would be proposed that moves the deposits to the balances:
+Then, after the transaction has been confirmed, an offchain update would be proposed that moves the deposits to the balances:
 
         // Offchain update 
         weiBalances: [0, 1 eth]
@@ -270,6 +271,7 @@ Performers can withdraw from channels using the same mechanism regardless of whe
 2. Wallet requests the hub to send a state update with the withdraw amount included as a pending withdraw.
     - The Hub may also chose to include ETH or tokens as part of the withdraw if the performer wanted to do a swap. For a more complex (but commonplace) example, suppose the performer has 100 BOOTY in their channel, wants to cash out in ETH but the Hub does not have that ETH already collateralized in the channel. The Hub could send over the following update:
 
+
         // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
         pendingWeiUpdates: [0, 0, 0.5 eth, 0.5 eth]
         pendingTokenUpdates: [0, 100 booty, 0, 0]
@@ -278,8 +280,11 @@ Performers can withdraw from channels using the same mechanism regardless of whe
         txCount: [currentOffchainCount, onChainCount++]
         //Note: timeout not needed for hub functions
 
-    - Note that the deposit and withdraw are both happening on the performer's side of the channel and that the weiBalances remain zero. This is because setting `weiBalances[1]` to `0.5` would violate the `"wei must be conserved"` requirement on the contract. By depositing and withdrawing from the same side, the channel's pending balance is first incremented by 0.5 ETH and then reduced by 0.5 ETH for the performer, allowing them to withdraw ETH directly from the Hub's in-contract balance if they have permission. Dope.
-    - For more info on calculating balances for deposit/withdraw states, see: [https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md)
+
+Note that the deposit and withdraw are both happening on the performer's side of the channel and that the weiBalances remain zero. This is because setting `weiBalances[1]` to `0.5` would violate the `"wei must be conserved"` requirement on the contract. By depositing and withdrawing from the same side, the channel's pending balance is first incremented by 0.5 ETH and then reduced by 0.5 ETH for the performer, allowing them to withdraw ETH directly from the Hub's in-contract balance if they have permission. Dope.
+    
+For more info on calculating balances for deposit/withdraw states, see: [https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md)
+
 3. Upon receiving the state update, the performer's wallet needs to validate the following:
     - The withdrawal amount matches the user's request
     - The exchange rate is correct
@@ -294,7 +299,7 @@ Performers can withdraw from channels using the same mechanism regardless of whe
 
 ## Global Constants
 
-    `address public hub; 
+    address public hub; 
     uint256 public challengePeriod;
     ERC20 public approvedToken;`
 
@@ -398,6 +403,7 @@ Returns the amount of ERC20 tokens that the hub can withdraw.
 4. It transfers the pending withdrawals to the provided `recipient` 
 5. It stores the new `txCount`, `threadRoot`, and `threadCount`.
 6. It emits a `DidUpdateChannel` event.
+
 
     function hubAuthorizedUpdate(
             address user,
@@ -550,6 +556,7 @@ Begins the unilateral channel withdrawal process for the currently-stored onchai
 5. The status is set to `Status.ChannelDispute`.
 6. Emits `DidStartExitChannel` event.
 
+
     function startExit(
             address user
         ) public noReentrancy {
@@ -589,6 +596,7 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
 10. The `channelClosingTime` field is set to `now` + `challengePeriod`.
 11. The status is set to `Status.ChannelDispute`.
 12. Emits `DidStartExitChannel` event.
+
 
       function startExitWithUpdate(
             address[2] user, // [user, recipient]
@@ -679,6 +687,7 @@ Begins the unilateral channel withdrawal process with the provided offchain stat
 12. Otherwise, sets the thread dispute time and changes the channel's state to `ThreadDispute`.
 13. Reinitializes the channel closing time and exit initiator variables since the channel dispute process has been completed.
 14. Emits the `DidEmptyChannelWithChallenge` event.
+
 
         function emptyChannelWithChallenge(
             address[2] user,
@@ -796,6 +805,7 @@ Called by any party when the channel dispute timer expires. Uses the latest avai
 6. Reinitializes the channel closing time and exit initiator variables since the channel dispute process has been completed.
 7. Emits the `DidEmptyChannel` event.
 
+
     function emptyChannel(
             address user
         ) public noReentrancy {
@@ -848,7 +858,7 @@ Called by any party when the channel dispute timer expires. Uses the latest avai
             );
         }
 
-## startExitThreads
+## startExitThread
 
 Initializes the thread onchain to prep it for dispute (called when no newer state update is available). This is the thread corollary to `startExit` for channel. 
 
@@ -859,6 +869,7 @@ Initializes the thread onchain to prep it for dispute (called when no newer stat
 5. Verifies the signature that is submitted to ensure that it belongs to the sender and verifies that the initial state of this thread is contained in the recorded `threadRoot` using `_verifyThread.`
 6. Updates the thread state onchain and sets `inDispute` to true.
 7. Emits the `DidStartExitThread` event.
+
 
     function startExitThread(
             address user,
@@ -897,7 +908,7 @@ Initializes the thread onchain to prep it for dispute (called when no newer stat
             );
         }
 
-## startExitThreadsWithUpdates
+## startExitThreadWithUpdate
 
 Initializes thread state onchain and immediately updates it. This is called when a party wants to dispute a thread and also has a state beyond just the initial state. The channel corollary is `startExitWithUpdate`
 
@@ -911,6 +922,7 @@ Initializes thread state onchain and immediately updates it. This is called when
 8. Verifies that the signature of the updated thread state using the `_verifyThread` method. Note that the `threadRoot` is set to `bytes32(0x0)`because a merkle proof is not needed for the not-initial state.
 9. Updates the thread state onchain.
 10. Emits the `DidStartExitThread` event.
+
 
     function startExitThreadWithUpdate(
             address user,
@@ -981,6 +993,7 @@ Let's the receiver side of the thread (hub for user→hub, performer for hub→p
 9. Updates the thread's `txCount` and sets `inDispute` to false. This allows the thread to now be reused.
 10. Decrements the thread count and if the thread count is zero, reopens the channel (similar to above step), reinitializes `threadRoot`, and resets dispute fields.
 11. Emits `DidEmptyThread` event.
+
 
     function fastEmptyThread(
             address user,
@@ -1073,6 +1086,7 @@ Called by any party when the thread dispute timer expires. Uses the latest avail
 5. Updates the thread's `txCount` and sets `inDispute` to false. This allows the thread to now be reused.
 6. Decrements the thread count and if the thread count is zero, reopens the channel (similar to above step), reinitializes `threadRoot`, and resets dispute fields.
 
+
         function emptyThread(
             address user,
             address sender,
@@ -1146,6 +1160,7 @@ Called in the event that threads reach an unsettleable state because they were n
 4. Resets all other channel state params and sets the channel status to `Open`.
 5. Emits the `DidNukeThreads` event.
 
+
     function nukeThreads(
             address user
         ) public noReentrancy {
@@ -1202,12 +1217,13 @@ Internal view function that verifies the authorized update. Called by hub and us
 
 1. It verifies that the channel is open.
 2. It verifies that the timeout is either 0 or has not yet expired.
-3. It verifies that the incoming `txCount` variables conform to the following rules:
-    1. The provided global `txCount` must always be strictly higher than the stored global `txCount`. This is because the global `txCount` is expected to increment for every state update.
-    2. The provided onchain `txCount` must be greater than or equal to the stored onchain `txCount`. This is because the onchain count only increases in the event of an onchain transaction, and the vast majority of updates will be handled offchain.
+3. It verifies that the incoming `txCount` variables conform to the following rules:
+    1. The provided global `txCount` must always be strictly higher than the stored global `txCount`. This is because the global `txCount` is expected to increment for every state update.
+    2. The provided onchain `txCount` must be greater than or equal to the stored onchain `txCount`. This is because the onchain count only increases in the event of an onchain transaction, and the vast majority of updates will be handled offchain.
 4. Verifies that the submitted balances do not exceed onchain recorded balances.
 5. It verifies that the contract holds enough Ether or tokens to collateralize the state update.
 6. It verifies that the proposed balance updates less withdrawals do not exceed the onchain balances + deposits.
+
 
     function _verifyAuthorizedUpdate(
             Channel storage channel,
@@ -1258,6 +1274,7 @@ Internal function that merges any unmerged updates (i.e. deposits) into the prop
 
 More info: [https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md)
 
+
     function _applyPendingUpdates(
             uint256[3] storage channelBalances,
             uint256[2] balances,
@@ -1291,6 +1308,7 @@ More info: [https://github.com/ConnextProject/contracts/blob/merge-refucktor/doc
 
 Internal function that does the exact opposite of `_applyPendingUpdates` to revert a withdrawal that was already introduced to balances on state submission.
 
+
     function _revertPendingUpdates(
             uint256[3] storage channelBalances,
             uint256[2] balances,
@@ -1319,6 +1337,7 @@ Internal function that does the exact opposite of `_applyPendingUpdates` to reve
 
 Internal function that applies pending updates and updates the onchain balance for the channel and for the `totalChannelWei`/ `totalChannelToken`.
 
+
     function _updateChannelBalances(
             Channel storage channel,
             uint256[2] weiBalances,
@@ -1340,6 +1359,7 @@ Internal function that applies pending updates and updates the onchain balance f
 ## _verifySig
 
 Internal view function that recovers signer from the sig(s) provided and verifies. Note that, if a one or both signatures is to be not provided, the corresponding sig input param should be a blank string.
+
 
     function _verifySig (
             address[2] user,
@@ -1383,6 +1403,7 @@ Internal view function that recovers signer from the sig(s) provided and verifie
 
 Internal view function that recovers signer from the provided sig and verifies.
 
+
     function _verifyThread(
             address user,
             address sender,
@@ -1415,6 +1436,7 @@ Internal view function that recovers signer from the provided sig and verifies.
 ## _isContained
 
 Internal, pure Merkle root inclusion check.
+
 
     function _isContained(bytes32 _hash, bytes _proof, bytes32 _root) internal pure returns (bool) {
             bytes32 cursor = _hash;
