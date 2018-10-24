@@ -15,10 +15,10 @@ sequenceDiagram
     Note over User,Hub: { desiredCurrency: 'BOOTY',<br>exchangeAmount: 69,<br>txCount: 1 }
 
 Hub->>User: Proposed, unsigned state update
-Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1],<br><br> timeout: 156700391 } (offchain)
+Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1]<br><br>  } 
 
 User->>Hub: Verified, signed state update
-Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1] <br><br> timeout: 156700391,<br>sigA: 0xac3f} (offchain)
+Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1], <br><br><br>sigA: 0xac3f} <br>timeout: 156700391 (offchain)
     User-->User: Start Offchain Timer
 
     alt Hub responds in time
