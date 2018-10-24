@@ -119,7 +119,7 @@ contract ChannelManager {
     struct Channel {
         uint256[3] weiBalances; // [hub, user, total]
         uint256[3] tokenBalances; // [hub, user, total]
-        uint256[2] txCount; // persisted onchain even when empty [global, onchain]
+        uint256[2] txCount; // persisted onchain even when empty [global, pending]
         bytes32 threadRoot;
         uint256 threadCount;
         address exitInitiator;
@@ -130,8 +130,8 @@ contract ChannelManager {
     }
 
     struct Thread {
-        uint256[2] weiBalances; // [hub, user]
-        uint256[2] tokenBalances; // [hub, user]
+        uint256[2] weiBalances; // [sender, receiver]
+        uint256[2] tokenBalances; // [sender, receiver]
         uint256 txCount; // persisted onchain even when empty
         bool inDispute; // needed so we don't close threads twice
     }
@@ -474,25 +474,21 @@ contract ChannelManager {
         }
 
         // deduct hub/user wei/tokens from total channel balances
-        channel.weiBalances[2] = channel.weiBalances[2].sub(weiBalances[0]).sub(weiBalances[1]);
-        channel.tokenBalances[2] = channel.tokenBalances[2].sub(tokenBalances[0]).sub(tokenBalances[1]);
+        channel.weiBalances[2] = channel.weiBalances[2].sub(channel.weiBalances[0]).sub(channel.weiBalances[1]);
+        channel.tokenBalances[2] = channel.tokenBalances[2].sub(channel.tokenBalances[0]).sub(channel.tokenBalances[1]);
 
         // transfer hub wei balance from channel to reserves
-        totalChannelWei = totalChannelWei.sub(channel.weiBalances[0]);
-        channel.weiBalances[0] = 0;
-
+        totalChannelWei = totalChannelWei.sub(channel.weiBalances[0]).sub(channel.weiBalances[1]);
         // transfer user wei balance to user
-        totalChannelWei = totalChannelWei.sub(channel.weiBalances[1]);
         user[0].transfer(channel.weiBalances[1]);
+        channel.weiBalances[0] = 0;
         channel.weiBalances[1] = 0;
 
         // transfer hub token balance from channel to reserves
-        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[0]);
-        channel.tokenBalances[0] = 0;
-
+        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[0]).sub(channel.tokenBalances[1]);
         // transfer user token balance to user
-        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[1]);
         require(approvedToken.transfer(user[0], channel.tokenBalances[1]), "user token withdrawal transfer failed");
+        channel.tokenBalances[0] = 0;
         channel.tokenBalances[1] = 0;
 
         // update state variables
@@ -537,21 +533,17 @@ contract ChannelManager {
         channel.tokenBalances[2] = channel.tokenBalances[2].sub(channel.tokenBalances[0]).sub(channel.tokenBalances[1]);
 
         // transfer hub wei balance from channel to reserves
-        totalChannelWei = totalChannelWei.sub(channel.weiBalances[0]);
-        channel.weiBalances[0] = 0;
-
+        totalChannelWei = totalChannelWei.sub(channel.weiBalances[0]).sub(channel.weiBalances[1]);
         // transfer user wei balance to user
-        totalChannelWei = totalChannelWei.sub(channel.weiBalances[1]);
-        user.transfer(channel.weiBalances[1]);
+        user[0].transfer(channel.weiBalances[1]);
+        channel.weiBalances[0] = 0;
         channel.weiBalances[1] = 0;
 
         // transfer hub token balance from channel to reserves
-        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[0]);
-        channel.tokenBalances[0] = 0;
-
+        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[0]).sub(channel.tokenBalances[1]);
         // transfer user token balance to user
-        totalChannelToken = totalChannelToken.sub(channel.tokenBalances[1]);
-        require(approvedToken.transfer(user, channel.tokenBalances[1]), "user token withdrawal transfer failed");
+        require(approvedToken.transfer(user[0], channel.tokenBalances[1]), "user token withdrawal transfer failed");
+        channel.tokenBalances[0] = 0;
         channel.tokenBalances[1] = 0;
 
         if (channel.threadCount > 0) {
@@ -669,6 +661,7 @@ contract ChannelManager {
         );
     }
 
+    // TODO - get rid of proof
     // non-sender can empty anytime with a state update after startExitThread/WithUpdate is called
     function fastEmptyThread(
         address user,
@@ -692,6 +685,9 @@ contract ChannelManager {
         require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
         require(weiBalances[0].add(weiBalances[1]) == thread.weiBalances[0].add(thread.weiBalances[1]), "updated wei balances must match sum of thread wei balances");
         require(tokenBalances[0].add(tokenBalances[1]) == thread.tokenBalances[0].add(thread.tokenBalances[1]), "updated token balances must match sum of thread token balances");
+
+        require(updatedWeiBalances[1] > weiBalances[1], "receiver wei balance must always increase");
+        require(updatedTokenBalances[1] > tokenBalances[1], "receiver token balance must always increase");
 
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
         _verifyThread(user, sender, receiver, weiBalances, tokenBalances, txCount, proof, sig, bytes32(0x0));
@@ -765,23 +761,22 @@ contract ChannelManager {
 
         // deduct wei balances from total channel wei and reset thread balances
         totalChannelWei = totalChannelWei.sub(thread.weiBalances[0]).sub(thread.weiBalances[1]);
-        thread.weiBalances[0] = 0;
-        thread.weiBalances[1] = 0;
-
         // transfer wei to user if they are receiver (otherwise gets added to reserves implicitly)
         if (user == receiver) {
             user.transfer(thread.weiBalances[1]);
         }
+        thread.weiBalances[0] = 0;
+        thread.weiBalances[1] = 0;
+
 
         // deduct token balances from channel total balances and reset thread balances
         totalChannelToken = totalChannelToken.sub(thread.tokenBalances[0]).sub(thread.tokenBalances[1]);
-        thread.tokenBalances[0] = 0;
-        thread.tokenBalances[1] = 0;
-
         // transfer token to user if they are receiver (otherwise gets added to reserves implicitly)
         if (user == receiver) {
             require(approvedToken.transfer(user, thread.tokenBalances[1]), "user token withdrawal transfer failed");
         }
+        thread.tokenBalances[0] = 0;
+        thread.tokenBalances[1] = 0;
 
         thread.inDispute = false;
 
@@ -865,6 +860,7 @@ contract ChannelManager {
 
         // Usage:
         // 1. exchange operations to protect user from exchange rate fluctuations
+        // 2. protects hub against user delaying forever
         require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
@@ -899,10 +895,18 @@ contract ChannelManager {
         uint256[4] pendingUpdates
     ) internal {
         // update hub balance
+        // 1: { weiBalances: [100, 100] }
+        // 1: { weiBalances: [100, 100], pendingWeiUpdates: [0, 0, 100, 50] } <- deposit > withdrawal, don't update offchain [COMMITTED ONCHAIN]
+        // 1: { weiBalances: [110, 90], pendingWeiUpdates: [0, 0, 100, 50] } <- user pays hub [OFFCHAIN UPDATE]
+        // 1: { weiBalances: [110, 140] <- final (apply pending updates)
         // If the deposit is greater than the withdrawal, add the net of deposit minus withdrawal to the balances.
         // Assumes the net has *not yet* been added to the balances.
         if (pendingUpdates[0] > pendingUpdates[1]) {
             channelBalances[0] = balances[0].add(pendingUpdates[0].sub(pendingUpdates[1]));
+        // 2: { weiBalances: [100, 100] }
+        // 2: { weiBalances: [100, 50], pendingWeiUpdates: [0, 0, 50, 100] } <- deposit < withdrawal, add delta offchain [COMMITTED ONCHAIN]
+        // 2: { weiBalances: [110, 40], pendingWeiUpdates: [0, 0, 50, 100] } <- user pays hub [OFFCHAIN UPDATE]
+        // 2: { weiBalances: [110, 40] <- final (discard pending updates)
         // Otherwise, if the deposit is less than or equal to the withdrawal,
         // Assumes the net has *already* been added to the balances.
         } else {
@@ -915,6 +919,10 @@ contract ChannelManager {
         if (pendingUpdates[2] > pendingUpdates[3]) {
             channelBalances[1] = balances[1].add(pendingUpdates[2].sub(pendingUpdates[3]));
 
+        // 0: { weiBalances: [100, 100] }
+        // 0: { weiBalances: [100, 50], pendingWeiUpdates: [0, 0, 0, 50] } <- deposit < withdrawal, add delta offchain [COMMITTED ONCHAIN]
+        // 0: { weiBalances: [110, 50], pendingWeiUpdates: [0, 0, 0, 50] } <- user pays hub [OFFCHAIN UPDATE]
+        // 0: { weiBalances: [110, 40] <- final (discard pending updates)
         // Otherwise, if the deposit is less than or equal to the withdrawal,
         // Assumes the net has *already* been added to the balances.
         } else {
@@ -927,10 +935,18 @@ contract ChannelManager {
         uint256[2] balances,
         uint256[4] pendingUpdates
     ) internal {
+        // 1: { weiBalances: [100, 100] }
+        // 1: { weiBalances: [100, 100], pendingWeiUpdates: [0, 0, 100, 50] } <- deposit > withdrawal, don't update offchain [NOT COMMITTED ONCHAIN]
+        // 1: { weiBalances: [110, 90], pendingWeiUpdates: [0, 0, 100, 50] } <- user pays hub [OFFCHAIN UPDATE]
+        // 1: { weiBalances: [110, 90] <- final (discard pending updates)
         // If the pending update has NOT been executed AND deposits > withdrawals, offchain state was NOT updated with delta, and is thus correct
         if (pendingUpdates[0] > pendingUpdates[1]) {
             channelBalances[0] = balances[0];
 
+        // 2: { weiBalances: [100, 100] }
+        // 2: { weiBalances: [100, 50], pendingWeiUpdates: [0, 0, 50, 100] } <- deposit < withdrawal, add delta offchain [NOT COMMITTED ONCHAIN]
+        // 2: { weiBalances: [110, 40], pendingWeiUpdates: [0, 0, 50, 100] } <- user pays hub [OFFCHAIN UPDATE]
+        // 2: { weiBalances: [110, 90] <- final (revert pending updates)
         // If the pending update has NOT been executed AND deposits < withdrawals, offchain state should have been updated with delta, and must be reverted
         } else {
             channelBalances[0] = balances[0].add(pendingUpdates[1].sub(pendingUpdates[0])); // <- add withdrawal, sub deposit (opposite order as _applyPendingUpdates)
@@ -960,12 +976,12 @@ contract ChannelManager {
         totalChannelToken = totalChannelToken.add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[1]).sub(pendingTokenUpdates[3]);
 
         // update channel total balances
-        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[1]).sub(pendingWeiUpdates[2]).sub(pendingWeiUpdates[3]);
-        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[1]).sub(pendingTokenUpdates[2]).sub(pendingTokenUpdates[3]);
+        channel.weiBalances[2] = channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]).sub(pendingWeiUpdates[1]).sub(pendingWeiUpdates[3]);
+        channel.tokenBalances[2] = channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]).sub(pendingTokenUpdates[1]).sub(pendingTokenUpdates[3]);
     }
 
     function _verifySig (
-        address[2] user,
+        address[2] user, // [user, recipient]
         uint256[2] weiBalances, // [hub, user]
         uint256[2] tokenBalances, // [hub, user]
         uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
@@ -993,12 +1009,12 @@ contract ChannelManager {
             )
         );
 
-        if (keccak256(sigUser) != keccak256("")) {
-            require(user[0] == ECTools.recoverSigner(state, sigUser));
-        }
-
         if (keccak256(sigHub) != keccak256("")) {
             require(hub == ECTools.recoverSigner(state, sigHub));
+        }
+
+        if (keccak256(sigUser) != keccak256("")) {
+            require(user[0] == ECTools.recoverSigner(state, sigUser));
         }
     }
 
