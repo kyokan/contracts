@@ -1,9 +1,5 @@
 sequenceDiagram
 
-    ###############################
-    # TO DO: what about when hub cant afford exchange?
-    ###############################
-
     # title <u>Offchain Exchange</u>
 
     # aliases
@@ -16,9 +12,9 @@ sequenceDiagram
 
 
     User->>Hub: Proposes Exchange
-    Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1], <br> timeout: 156700391, <br>sigA: 0xac3f }
+    Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1], <br>sigA: 0xac3f }<br><br> timeout: 156700391 (offchain)
 
-    User-->User: Start timer
+    User-->User: Start Offchain Timer
 
     alt Hub responds in time
 
@@ -27,15 +23,19 @@ sequenceDiagram
         alt Exchange verified
             
             Hub->>User: Cosign exchange state
-            Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1], <br> timeout: 156700391, <br>sigA: 0xac3f, <br>sigI: 0xac3f }
-        
+            Note over User,Hub: State: <br> { weiBalances: [69, 0] //[hub, user], <br> tokenBalances: [0, 69], <br> txCount: [2, 1], <br>sigA: 0xac3f, <br>sigI: 0xac3f } <br> timeout: 156700391 (offchain)
+      
+            User-->User: Remove Offchain Timer
+
         else Exchange rejected
             
             Hub->>User: Previous state at higher nonce
-            Note over User,Hub: Previous state with higher nonce is <br> signed and returned to user. <br> State: <br> { weiBalances: [0, 69] //[hub, user], <br> tokenBalances: [0, 0], <br> txCount: [3, 1], <br> timeout: 0, <br>sigI: 0xac3f }
+            Note over User,Hub: Previous state with higher nonce is <br> signed and returned to user. <br> State: <br> { weiBalances: [0, 69] //[hub, user], <br> tokenBalances: [69, 0], <br> txCount: [3, 1], <br><br>sigI: 0xac3f }
+
+            User-->User: Remove Offchain Timer
 
             User->>Hub: Verify state, cosign
-            Note over User,Hub: State: <br> { weiBalances: [0, 69] //[hub, user], <br> tokenBalances: [0, 0], <br> txCount: [3, 1], <br> timeout: 0, <br>sigI: 0xac3f, <br>sigA: 0xac3f }
+            Note over User,Hub: State: <br> { weiBalances: [0, 69] //[hub, user], <br> tokenBalances: [69, 0], <br> txCount: [3, 1], <br>sigI: 0xac3f, <br>sigA: 0xac3f }
 
             User-->User: Propose new exchange update
 
@@ -49,5 +49,5 @@ sequenceDiagram
             User->>Contract: startExitWithUpdate()
         end
 
-        Note over User,Contract: Does the thread dispute process also get initiated here? Finalize <br> thread dispute contract functions
+        Note over User,Contract: Continue with the thread disputes once the channel dispute is<br> completed, if there are any open threads.
     end
