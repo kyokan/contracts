@@ -70,7 +70,8 @@ async function initHash(contract, init) {
 // NOTE : ganache-cli -m 'refuse result toy bunker royal small story exhaust know piano base stand'
 
 contract("ChannelManager::constructor", accounts => {
-  let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken, initState
+  let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken
+
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
     tokenAddress = await Token.deployed()
@@ -88,14 +89,28 @@ contract("ChannelManager::constructor", accounts => {
   })
 })
 
-contract("ChannelManager::userAuthorizedUpdate", accounts => {
-  let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken, initState
+contract("ChannelManager::hubContractWithdraw", accounts => {
+  let channelManager
+
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-    tokenAddress = await Token.deployed()
-    hubAddress = await channelManager.hub()
-    challengePeriod = await channelManager.challengePeriod()
-    approvedToken = await channelManager.approvedToken()
+  })  
+
+  describe('hubContractWithdraw', () => {
+    it("happy case", async() => {
+      await channelManager.hubContractWithdraw(
+        0,
+        0
+      )
+    })
+  })
+});
+
+contract("ChannelManager::userAuthorizedUpdate", accounts => {
+  let channelManager
+
+  before('deploy contracts', async () => {
+    channelManager = await Ledger.deployed()
   })  
 
   describe('userAuthorizedUpdate', () => {
@@ -114,6 +129,7 @@ contract("ChannelManager::userAuthorizedUpdate", accounts => {
         "timeout" : 0
       }
     })  
+
     it("happy case", async() => {
       init.sigUser = await initHash(channelManager, init)
       await channelManager.userAuthorizedUpdate(
@@ -133,17 +149,15 @@ contract("ChannelManager::userAuthorizedUpdate", accounts => {
 });
   
 contract("ChannelManager::hubAuthorizedUpdate", accounts => {
-  let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken, initState
+  let channelManager
+
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
-    tokenAddress = await Token.deployed()
-    hubAddress = await channelManager.hub()
-    challengePeriod = await channelManager.challengePeriod()
-    approvedToken = await channelManager.approvedToken()
   })
 
   describe('hubAuthorizedUpdate', () => {
-    let hash, init
+    let init
+
     beforeEach(async () => {
       init = {
         "user" : accounts[0],
@@ -160,7 +174,6 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
     })
 
     it("happy case", async() => {
-      // init.txCount = [2,2]
       init.sigUser = await initHash(channelManager, init)
       await channelManager.hubAuthorizedUpdate(
         init.user, 
@@ -176,25 +189,20 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
         init.sigUser
       )
     })
-    // it.skip("wei transfer failure", async() => {
-    //   init.weiBalances = [0, 0]
-    //   init.txCount = [2,2]
-    //   init.timeout = 10
-    //   init.sigUser = await initHash(channelManager, init)
-    //   await channelManager.hubAuthorizedUpdate(
-    //     init.user, 
-    //     init.recipient,
-    //     init.weiBalances,
-    //     init.tokenBalances,
-    //     init.pendingWeiUpdates,
-    //     init.pendingTokenUpdates,
-    //     init.txCount,
-    //     init.threadRoot,
-    //     init.threadCount,
-    //     init.timeout,
-    //     init.sigUser
-    //   )
-    // })
   })
 });
 
+contract("ChannelManager::startExit", accounts => {
+  let channelManager
+  before('deploy contracts', async () => {
+    channelManager = await Ledger.deployed()
+  })  
+
+  describe('startExit', () => {
+    it("happy case", async() => {
+      await channelManager.startExit(
+        accounts[0]
+      )
+    })
+  })
+});
