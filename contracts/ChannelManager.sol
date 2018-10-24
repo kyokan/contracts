@@ -696,6 +696,10 @@ contract ChannelManager {
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
         _verifyThread(user, sender, receiver, weiBalances, tokenBalances, txCount, proof, sig, bytes32(0x0));
 
+        //Unidirectional thread
+        require(WeiBalances[1] > thread.weiBalances[1], "receiver wei balance must always increase");
+        require(TokenBalances[1] > thread.tokenBalances[1], "receiver token balance must always increase");
+
         // deduct sender/receiver wei/tokens about to be emptied from the thread from the total channel balances
         channel.weiBalances[2] = channel.weiBalances[2].sub(weiBalances[0]).sub(weiBalances[1]);
         channel.tokenBalances[2] = channel.tokenBalances[2].sub(tokenBalances[0]).sub(tokenBalances[1]);
