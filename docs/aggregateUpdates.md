@@ -1,3 +1,11 @@
+*tl;dr:* When calculating the balance for an update which includes a pending deposit, pending withdraw, or both deposit and withdraw (into the same side of the channel), use the following heuristic:
+```
+1) if pending withdrawal > 0 and deposit = 0 then decrement the balance by withdrawal amount
+2) if pending withdrawal > 0 and deposit > 0 and deposit > withdrawal then submit the previous state balance
+3) if pending withdrawal > 0 and deposit > 0 and deposit < withdrawal, decrement the balance by (withdrawal - deposit)
+4) if pending withdrawal = 0 and deposit > 0 then submit the previous state balance
+```
+
 Arjun did a great job of pointing out the following edge case:
 
 Normally, you deduct the withdrawal in advance from the offchain balances:
