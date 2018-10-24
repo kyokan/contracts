@@ -68,7 +68,8 @@ async function initHash(contract, init) {
 }
 
 // NOTE : ganache-cli -m 'refuse result toy bunker royal small story exhaust know piano base stand'
-contract("ChannelManager", accounts => {
+
+contract("ChannelManager::constructor", accounts => {
   let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken, initState
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
@@ -85,9 +86,62 @@ contract("ChannelManager", accounts => {
       assert.equal(approvedToken, tokenAddress.address)
     })
   })
+})
 
+contract("ChannelManager::userAuthorizedUpdate", accounts => {
+  let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken, initState
+  before('deploy contracts', async () => {
+    channelManager = await Ledger.deployed()
+    tokenAddress = await Token.deployed()
+    hubAddress = await channelManager.hub()
+    challengePeriod = await channelManager.challengePeriod()
+    approvedToken = await channelManager.approvedToken()
+  })  
 
+  describe('userAuthorizedUpdate', () => {
+    let hash, init
+    beforeEach(async () => {
+      init = {
+        "user" : accounts[0],
+        "recipient" : accounts[1],
+        "weiBalances" : [0, 0],
+        "tokenBalances" : [0, 0],
+        "pendingWeiUpdates" : [0, 0, 0, 0],
+        "pendingTokenUpdates" : [0, 0, 0, 0],
+        "txCount" : [1,1],
+        "threadRoot" : emptyRootHash,
+        "threadCount" : 0,
+        "timeout" : 0
+      }
+    })  
+    it("happy case", async() => {
+      init.sigUser = await initHash(channelManager, init)
+      await channelManager.userAuthorizedUpdate(
+        init.recipient,
+        init.weiBalances,
+        init.tokenBalances,
+        init.pendingWeiUpdates,
+        init.pendingTokenUpdates,
+        init.txCount,
+        init.threadRoot,
+        init.threadCount,
+        init.timeout,
+        init.sigUser
+      )
+    })
+  })
+});
   
+contract("ChannelManager::hubAuthorizedUpdate", accounts => {
+  let channelManager, tokenAddress, hubAddress, challengePeriod, approvedToken, initState
+  before('deploy contracts', async () => {
+    channelManager = await Ledger.deployed()
+    tokenAddress = await Token.deployed()
+    hubAddress = await channelManager.hub()
+    challengePeriod = await channelManager.challengePeriod()
+    approvedToken = await channelManager.approvedToken()
+  })
+
   describe('hubAuthorizedUpdate', () => {
     let hash, init
     beforeEach(async () => {
@@ -106,6 +160,7 @@ contract("ChannelManager", accounts => {
     })
 
     it("happy case", async() => {
+      // init.txCount = [2,2]
       init.sigUser = await initHash(channelManager, init)
       await channelManager.hubAuthorizedUpdate(
         init.user, 
@@ -121,6 +176,25 @@ contract("ChannelManager", accounts => {
         init.sigUser
       )
     })
+    // it.skip("wei transfer failure", async() => {
+    //   init.weiBalances = [0, 0]
+    //   init.txCount = [2,2]
+    //   init.timeout = 10
+    //   init.sigUser = await initHash(channelManager, init)
+    //   await channelManager.hubAuthorizedUpdate(
+    //     init.user, 
+    //     init.recipient,
+    //     init.weiBalances,
+    //     init.tokenBalances,
+    //     init.pendingWeiUpdates,
+    //     init.pendingTokenUpdates,
+    //     init.txCount,
+    //     init.threadRoot,
+    //     init.threadCount,
+    //     init.timeout,
+    //     init.sigUser
+    //   )
+    // })
   })
 });
 
