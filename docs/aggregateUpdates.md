@@ -8,8 +8,6 @@
 
 # Aggregate Updates
 
-Arjun did a great job of pointing out the following edge case:
-
 Normally, you deduct the withdrawal in advance from the offchain balances:
 
         // { weiBalances: [0, 1], tokenBalances: [0, 100], txCount: [1, 1] }
