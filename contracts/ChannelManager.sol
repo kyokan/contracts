@@ -30,15 +30,14 @@ contract ChannelManager {
     // balance).
     event DidUpdateChannel (
         address indexed user,
-        uint256 senderIdx,
-        uint256[2] weiBalances,
-        uint256[2] tokenBalances,
-        uint256[4] pendingWeiUpdates,
-        uint256[4] pendingTokenUpdates,
-        uint256[2] txCount,
+        uint256 senderIdx, // 0: hub, 1: user
+        uint256[2] weiBalances, // [hub, user]
+        uint256[2] tokenBalances, // [hub, user]
+        uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        uint256[4] pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        uint256[2] txCount, // [global, onchain]
         bytes32 threadRoot,
-        uint256 threadCount,
-        uint256 timeout
+        uint256 threadCount
     );
 
     // Note: unlike the DidUpdateChannel event, the ``DidStartExitChannel``
@@ -46,43 +45,31 @@ contract ChannelManager {
     // applied as part of startExitWithUpdate.
     event DidStartExitChannel (
         address indexed user,
-        uint256 senderIdx,
-        uint256[2] weiBalances,
-        uint256[2] tokenBalances,
-        uint256[2] txCount,
-        uint256 threadCount,
-        address exitInitiator
-    );
-
-    // Note: like DidStartExitChannel, the payload contains thechannel state after
-    // any update has been applied.
-    event DidEmptyChannelWithChallenge (
-        address indexed user,
-        uint256 senderIdx,
-        uint256[2] weiBalances,
-        uint256[2] tokenBalances,
-        uint256[2] txCount,
+        uint256 senderIdx, // 0: hub, 1: user
+        uint256[2] weiBalances, // [hub, user]
+        uint256[2] tokenBalances, // [hub, user]
+        uint256[2] txCount, // [global, onchain]
         bytes32 threadRoot,
         uint256 threadCount
     );
 
     event DidEmptyChannel (
         address indexed user,
-        uint256 senderIdx,
-        uint256[2] weiBalances,
-        uint256[2] tokenBalances,
-        uint256[2] txCount,
-        uint256 threadCount,
-        address exitInitiator
+        uint256 senderIdx, // 0: hub, 1: user
+        uint256[2] weiBalances, // [hub, user]
+        uint256[2] tokenBalances, // [hub, user]
+        uint256[2] txCount, // [global, onchain]
+        bytes32 threadRoot,
+        uint256 threadCount
     );
 
     event DidStartExitThread (
         address user,
         address indexed sender,
         address indexed receiver,
-        uint256 senderIdx,
-        uint256[2] weiBalances,
-        uint256[2] tokenBalances,
+        address senderAddress, // either hub or user
+        uint256[2] weiBalances, // [sender, receiver]
+        uint256[2] tokenBalances, // [sender, receiver]
         uint256 txCount
     );
 
@@ -90,7 +77,7 @@ contract ChannelManager {
         address user,
         address indexed sender,
         address indexed receiver,
-        uint256 senderIdx,
+        address senderAddress, // can be anyone
         uint256[2] channelWeiBalances,
         uint256[2] channelTokenBalances,
         uint256[2] channelTxCount,
@@ -100,9 +87,9 @@ contract ChannelManager {
 
     event DidNukeThreads(
         address indexed user,
-        address senderAddress,
-        uint256 weiAmount,
-        uint256 tokenAmount,
+        address senderAddress, // can be anyone
+        uint256 weiAmount, // amount of wei sent
+        uint256 tokenAmount, // amount of tokens sent
         uint256[2] channelWeiBalances,
         uint256[2] channelTokenBalances,
         uint256[2] channelTxCount,
@@ -245,8 +232,7 @@ contract ChannelManager {
             pendingTokenUpdates,
             txCount,
             threadRoot,
-            threadCount,
-            timeout
+            threadCount
         );
     }
 
@@ -312,10 +298,9 @@ contract ChannelManager {
             tokenBalances,
             pendingWeiUpdates,
             pendingTokenUpdates,
-            txCount,
-            threadRoot,
-            threadCount,
-            timeout
+            channel.txCount,
+            channel.threadRoot,
+            channel.threadCount
         );
     }
 
@@ -342,8 +327,8 @@ contract ChannelManager {
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
-            channel.threadCount,
-            channel.exitInitiator
+            channel.threadRoot,
+            channel.threadCount
         );
     }
 
@@ -414,8 +399,8 @@ contract ChannelManager {
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
-            channel.threadCount,
-            channel.exitInitiator
+            channel.threadRoot,
+            channel.threadCount
         );
     }
 
@@ -508,7 +493,7 @@ contract ChannelManager {
         channel.channelClosingTime = 0;
 
 
-        emit DidEmptyChannelWithChallenge(
+        emit DidEmptyChannel(
             user[0],
             msg.sender == hub ? 0 : 1,
             [channel.weiBalances[0], channel.weiBalances[1]],
@@ -563,8 +548,8 @@ contract ChannelManager {
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
-            channel.threadCount,
-            channel.exitInitiator
+            channel.threadRoot,
+            channel.threadCount
         );
     }
 
@@ -599,7 +584,7 @@ contract ChannelManager {
             user,
             sender,
             receiver,
-            msg.sender == hub ? 0 : 1,
+            msg.sender,
             thread.weiBalances,
             thread.tokenBalances,
             thread.txCount
@@ -735,7 +720,7 @@ contract ChannelManager {
             user,
             sender,
             receiver,
-            msg.sender == hub ? 0 : 1,
+            msg.sender,
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
@@ -796,7 +781,7 @@ contract ChannelManager {
             user,
             sender,
             receiver,
-            msg.sender == hub ? 0 : 1,
+            msg.sender,
             [channel.weiBalances[0], channel.weiBalances[1]],
             [channel.tokenBalances[0], channel.tokenBalances[1]],
             channel.txCount,
