@@ -199,11 +199,17 @@ contract ChannelManager {
         string sigUser
     ) public noReentrancy onlyHub {
         Channel storage channel = channels[user];
-        require(channel.status == Status.Open, "channel must be open");
 
-        // Usage:
-        // 1. exchange operations to protect user from exchange rate fluctuations
-        require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
+        _verifyAuthorizedUpdate(
+            channel,
+            txCount,
+            weiBalances,
+            tokenBalances,
+            pendingWeiUpdates,
+            pendingTokenUpdates,
+            timeout,
+            true
+        );
 
         _verifySig(
             user,
@@ -219,25 +225,6 @@ contract ChannelManager {
             sigUser,
             ""
         );
-
-        require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
-        require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
-
-        // offchain wei/token balances do not exceed onchain total wei/token
-        require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
-        require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
-
-        // hub has enough reserves for wei/token deposits
-        require(pendingWeiUpdates[0].add(pendingWeiUpdates[2]) <= getHubReserveWei(), "insufficient reserve wei for deposits");
-        require(pendingTokenUpdates[0].add(pendingTokenUpdates[2]) <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
-
-        // wei is conserved - the current total channel wei + both deposits > final balances + both withdrawals
-        require(channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]) >=
-                weiBalances[0].add(weiBalances[1]).add(pendingWeiUpdates[1]).add(pendingWeiUpdates[3]), "insufficient wei");
-
-        // token is conserved - the current total channel token + both deposits > final balances + both withdrawals
-        require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
-                tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
 
         _updateChannelBalances(channel, weiBalances, tokenBalances, pendingWeiUpdates, pendingTokenUpdates);
 
@@ -279,12 +266,17 @@ contract ChannelManager {
         require(msg.value == pendingWeiUpdates[2], "msg.value is not equal to pending user deposit");
 
         Channel storage channel = channels[msg.sender];
-        require(channel.status == Status.Open, "channel must be open");
 
-        // Usage:
-        // 1. exchange operations to protect hub from exchange rate fluctuations
-        // 2. protect hub against user failing to send the transaction in a timely manner
-        require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
+        _verifyAuthorizedUpdate(
+            channel,
+            txCount,
+            weiBalances,
+            tokenBalances,
+            pendingWeiUpdates,
+            pendingTokenUpdates,
+            timeout,
+            false
+        );
 
         _verifySig(
             msg.sender,
@@ -300,25 +292,6 @@ contract ChannelManager {
             "", // skip hub sig verification
             sigHub
         );
-
-        require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
-        require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
-
-        // offchain wei/token balances do not exceed onchain total wei/token
-        require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
-        require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
-
-        // wei is conserved - the current total channel wei + both deposits > final balances + both withdrawals
-        require(channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]) >=
-                weiBalances[0].add(weiBalances[1]).add(pendingWeiUpdates[1]).add(pendingWeiUpdates[3]), "insufficient wei");
-
-        // token is conserved - the current total channel token + both deposits > final balances + both withdrawals
-        require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
-                tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
-
-        // hub has enough reserves for wei/token deposits
-        require(pendingWeiUpdates[0] <= getHubReserveWei(), "insufficient reserve wei for deposits");
-        require(pendingTokenUpdates[0] <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
 
         // transfer user token deposit to this contract
         require(approvedToken.transferFrom(msg.sender, address(this), pendingTokenUpdates[2]), "user token deposit failed");
@@ -346,6 +319,48 @@ contract ChannelManager {
             threadCount,
             timeout
         );
+    }
+
+    function _verifyAuthorizedUpdate(
+        Channel storage channel,
+        uint256[2] txCount,
+        uint256[2] weiBalances,
+        uint256[2] tokenBalances, // [hub, user]
+        uint256[4] pendingWeiUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        uint256[4] pendingTokenUpdates, // [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
+        uint256 timeout,
+        bool isHub
+    ) internal view {
+        require(channel.status == Status.Open, "channel must be open");
+
+        // Usage:
+        // 1. exchange operations to protect user from exchange rate fluctuations
+        require(timeout == 0 || now < timeout, "the timeout must be zero or not have passed");
+
+        require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
+        require(txCount[1] >= channel.txCount[1], "onchain txCount must be higher or equal to the current onchain txCount");
+
+        // offchain wei/token balances do not exceed onchain total wei/token
+        require(weiBalances[0].add(weiBalances[1]) <= channel.weiBalances[2], "wei must be conserved");
+        require(tokenBalances[0].add(tokenBalances[1]) <= channel.tokenBalances[2], "tokens must be conserved");
+
+        // hub has enough reserves for wei/token deposits for both the user and itself (user deposit comes from hub)
+        if (isHub) {
+            require(pendingWeiUpdates[0].add(pendingWeiUpdates[2]) <= getHubReserveWei(), "insufficient reserve wei for deposits");
+            require(pendingTokenUpdates[0].add(pendingTokenUpdates[2]) <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
+        // hub has enough reserves for only its own wei/token deposits
+        } else {
+            require(pendingWeiUpdates[0] <= getHubReserveWei(), "insufficient reserve wei for deposits");
+            require(pendingTokenUpdates[0] <= getHubReserveTokens(), "insufficient reserve tokens for deposits");
+        }
+
+        // wei is conserved - the current total channel wei + both deposits > final balances + both withdrawals
+        require(channel.weiBalances[2].add(pendingWeiUpdates[0]).add(pendingWeiUpdates[2]) >=
+                weiBalances[0].add(weiBalances[1]).add(pendingWeiUpdates[1]).add(pendingWeiUpdates[3]), "insufficient wei");
+
+        // token is conserved - the current total channel token + both deposits > final balances + both withdrawals
+        require(channel.tokenBalances[2].add(pendingTokenUpdates[0]).add(pendingTokenUpdates[2]) >=
+                tokenBalances[0].add(tokenBalances[1]).add(pendingTokenUpdates[1]).add(pendingTokenUpdates[3]), "insufficient token");
     }
 
     function _applyPendingUpdates(
