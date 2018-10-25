@@ -1,5 +1,21 @@
 (Fully updated 10/24/2018)
 
+# Running the test suite
+
+Use the scripts in the package.json to ensure the proper versions of the dev dependencies:
+```
+# Node and npm versions:
+# node >= v10
+# npm >= v6
+
+# install the dev dependencies
+# run ganache in the background (or separate shell) ensuring the proper mnemonic
+# run the primary test suite using truffle network=ganache settings
+
+$ npm i
+$ npm run ganache &
+$ npm test
+```
 # DOCUMENT FOR CONTRACT SPEC
 
 Canonical links: [https://paper.dropbox.com/doc/SpankPay-BOOTY-Drop-2-CANONICAL-URLs--AP7jZj1zm4J7XSVcw0Ifk_fBAg-Qpw2NAWgCIdg0Z5G9lpSu](https://paper.dropbox.com/doc/SpankPay-BOOTY-Drop-2-CANONICAL-URLs--AP7jZj1zm4J7XSVcw0Ifk_fBAg-Qpw2NAWgCIdg0Z5G9lpSu)
@@ -284,7 +300,7 @@ Performers can withdraw from channels using the same mechanism regardless of whe
 ```
 
 Note that the deposit and withdraw are both happening on the performer's side of the channel and that the weiBalances remain zero. This is because setting `weiBalances[1]` to `0.5` would violate the `"wei must be conserved"` requirement on the contract. By depositing and withdrawing from the same side, the channel's pending balance is first incremented by 0.5 ETH and then reduced by 0.5 ETH for the performer, allowing them to withdraw ETH directly from the Hub's in-contract balance if they have permission. Dope.
-    
+
 For more info on calculating balances for deposit/withdraw states, see: [https://github.com/ConnextProject/contracts/blob/master/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/master/docs/aggregateUpdates.md)
 
 3. Upon receiving the state update, the performer's wallet needs to validate the following:
