@@ -190,7 +190,7 @@ async function emptyChannelWithChallenge(data, user) {
 // NOTE : hub : accounts[0], privKeys[0]
 
 let channelManager
-/*
+
 contract("ChannelManager::constructor", accounts => {
   let tokenAddress, hubAddress, challengePeriod, approvedToken
 
@@ -364,7 +364,7 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
 
   })
 });
-*/
+
 
 contract("ChannelManager::userAuthorizedUpdate", accounts => {
   let hub, alice, bob, init
