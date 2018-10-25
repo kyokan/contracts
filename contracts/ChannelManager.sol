@@ -394,7 +394,7 @@ contract ChannelManager {
 
         channel.exitInitiator = msg.sender;
         channel.channelClosingTime = now.add(challengePeriod);
-        channel.status == Status.ChannelDispute;
+        channel.status = Status.ChannelDispute;
 
         emit DidStartExitChannel(
             user[0],
@@ -487,10 +487,10 @@ contract ChannelManager {
 
         if (channel.threadCount > 0) {
             channel.threadClosingTime = now.add(challengePeriod);
-            channel.status == Status.ThreadDispute;
+            channel.status = Status.ThreadDispute;
         } else {
             channel.threadClosingTime = 0;
-            channel.status == Status.Open;
+            channel.status = Status.Open;
         }
 
         channel.exitInitiator = address(0x0);
@@ -537,10 +537,10 @@ contract ChannelManager {
 
         if (channel.threadCount > 0) {
             channel.threadClosingTime = now.add(challengePeriod);
-            channel.status == Status.ThreadDispute;
+            channel.status = Status.ThreadDispute;
         } else {
             channel.threadClosingTime = 0;
-            channel.status == Status.Open;
+            channel.status = Status.Open;
         }
 
         channel.exitInitiator = address(0x0);
