@@ -1,0 +1,9 @@
+{
+    "token": {
+        "supply":"696969",
+        "name":"Test Token",
+        "decimals":"18",
+        "ticker":"TST"
+    },
+    "timeout": 10000
+}

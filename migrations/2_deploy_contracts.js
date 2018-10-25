@@ -1,6 +1,7 @@
 const EC = artifacts.require("./ECTools.sol");
 const LC = artifacts.require("./ChannelManager.sol");
 const StandardToken = artifacts.require("./StandardToken.sol");
+const config = require("../config.json")
 
 module.exports = async function(deployer, network, accounts) {
   await deployer.deploy(EC);
@@ -12,9 +13,9 @@ module.exports = async function(deployer, network, accounts) {
     await deployer.deploy(
       StandardToken,
       supply,
-      "Test Token",
-      "18",
-      "TST"
+      config.token.name,
+      config.token.decimals,
+      config.token.ticker
     );
     const standardToken = await StandardToken.deployed();
     tokenAddress = standardToken.address;
@@ -24,7 +25,7 @@ module.exports = async function(deployer, network, accounts) {
   await deployer.deploy(
     LC,
     accounts[0],
-    10000,
+    config.timeout,
     tokenAddress
   );
 };

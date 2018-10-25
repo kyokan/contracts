@@ -248,7 +248,7 @@ contract ChannelManager {
         uint256 timeout,
         string sigHub
     ) public payable noReentrancy {
-        require(msg.value == pendingWeiUpdates[2], "msg.value is not equal to pending user deposit");
+        require(msg.value == pendingWeiUpdates[2], "userAuthorizedUpdate: msg.value is not equal to pending user deposit");
 
         Channel storage channel = channels[msg.sender];
 
@@ -688,9 +688,12 @@ contract ChannelManager {
         thread.weiBalances[0] = 0;
         thread.weiBalances[1] = 0;
 
-        // transfer wei to user if they are receiver (otherwise gets added to reserves implicitly)
+        // if user is receiver, send them receiver wei balance
         if (user == receiver) {
             user.transfer(weiBalances[1]);
+        // if user is sender, send them remainining sender wei balance
+        } else if (user == sender) {
+            user.transfer(weiBalances[0]);
         }
 
         // deduct token balances from channel total balances and reset thread balances
@@ -698,9 +701,12 @@ contract ChannelManager {
         thread.tokenBalances[0] = 0;
         thread.tokenBalances[1] = 0;
 
-        // transfer token to user if they are receiver (otherwise gets added to reserves implicitly)
+        // if user is receiver, send them receiver token balance
         if (user == receiver) {
-            require(approvedToken.transfer(user, tokenBalances[1]), "user token withdrawal transfer failed");
+            require(approvedToken.transfer(user, tokenBalances[1]), "user [receiver] token withdrawal transfer failed");
+        // if user is sender, send them remainining sender token balance
+        } else if (user == sender) {
+            require(approvedToken.transfer(user, tokenBalances[0]), "user [sender] token withdrawal transfer failed");
         }
 
         thread.txCount = txCount;
@@ -749,8 +755,12 @@ contract ChannelManager {
         // deduct wei balances from total channel wei and reset thread balances
         totalChannelWei = totalChannelWei.sub(thread.weiBalances[0]).sub(thread.weiBalances[1]);
         // transfer wei to user if they are receiver (otherwise gets added to reserves implicitly)
+        // if user is receiver, send them receiver wei balance
         if (user == receiver) {
             user.transfer(thread.weiBalances[1]);
+        // if user is sender, send them remainining sender wei balance
+        } else if (user == sender) {
+            user.transfer(thread.weiBalances[0]);
         }
         thread.weiBalances[0] = 0;
         thread.weiBalances[1] = 0;
@@ -758,9 +768,12 @@ contract ChannelManager {
 
         // deduct token balances from channel total balances and reset thread balances
         totalChannelToken = totalChannelToken.sub(thread.tokenBalances[0]).sub(thread.tokenBalances[1]);
-        // transfer token to user if they are receiver (otherwise gets added to reserves implicitly)
+        // if user is receiver, send them receiver token balance
         if (user == receiver) {
-            require(approvedToken.transfer(user, thread.tokenBalances[1]), "user token withdrawal transfer failed");
+            require(approvedToken.transfer(user, thread.tokenBalances[1]), "user [receiver] token withdrawal transfer failed");
+        // if user is sender, send them remainining sender token balance
+        } else if (user == sender) {
+            require(approvedToken.transfer(user, thread.tokenBalances[0]), "user [sender] token withdrawal transfer failed");
         }
         thread.tokenBalances[0] = 0;
         thread.tokenBalances[1] = 0;
@@ -980,6 +993,8 @@ contract ChannelManager {
         string sigHub,
         string sigUser
     ) internal view {
+        require(user[0] != hub, "user can not be hub");
+
         // prepare state hash to check hub sig
         bytes32 state = keccak256(
             abi.encodePacked(
@@ -997,11 +1012,11 @@ contract ChannelManager {
         );
 
         if (keccak256(sigHub) != keccak256("")) {
-            require(hub == ECTools.recoverSigner(state, sigHub));
+            require(hub == ECTools.recoverSigner(state, sigHub), "hub signature invalid");
         }
 
         if (keccak256(sigUser) != keccak256("")) {
-            require(user[0] == ECTools.recoverSigner(state, sigUser));
+            require(user[0] == ECTools.recoverSigner(state, sigUser), "user signature invalid");
         }
     }
 
@@ -1016,6 +1031,8 @@ contract ChannelManager {
         string sig,
         bytes32 threadRoot
     ) internal view {
+        require(sender != receiver, "sender can not be receiver");
+
         bytes32 state = keccak256(
             abi.encodePacked(
                 address(this),
