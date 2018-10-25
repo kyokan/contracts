@@ -50,7 +50,7 @@ function getEventParams(tx, event) {
   return false
 }
 
-async function initHash(contract, init) {
+async function initHash(contract, init, accountIndex) {
   const hash = await web3.utils.soliditySha3(
     contract.address,
     {type: 'address[2]', value: [init.user, init.recipient]},
@@ -63,7 +63,7 @@ async function initHash(contract, init) {
     init.threadCount,
     init.timeout
   )
-  const sig = await web3.eth.accounts.sign(hash, privKeys[0])
+  const sig = await web3.eth.accounts.sign(hash, privKeys[accountIndex])
   return sig.signature
 }
 
@@ -118,7 +118,7 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
 
     beforeEach(async () => {
       init = {
-        "user" : accounts[0],
+        "user" : accounts[1],
         "recipient" : accounts[1],
         "weiBalances" : [0, 0],
         "tokenBalances" : [0, 0],
@@ -132,7 +132,7 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
     })
 
     it("happy case", async() => {
-      init.sigUser = await initHash(channelManager, init)
+      init.sigUser = await initHash(channelManager, init, 1)
       await channelManager.hubAuthorizedUpdate(
         init.user,
         init.recipient,
@@ -162,7 +162,7 @@ contract("ChannelManager::userAuthorizedUpdate", accounts => {
     let hash, init
     beforeEach(async () => {
       init = {
-        "user" : accounts[0],
+        "user" : accounts[1],
         "recipient" : accounts[1],
         "weiBalances" : [0, 0],
         "tokenBalances" : [0, 0],
@@ -176,7 +176,7 @@ contract("ChannelManager::userAuthorizedUpdate", accounts => {
     })
 
     it("happy case", async() => {
-      init.sigUser = await initHash(channelManager, init)
+      init.sigHub = await initHash(channelManager, init, 0)
       await channelManager.userAuthorizedUpdate(
         init.recipient,
         init.weiBalances,
@@ -187,7 +187,8 @@ contract("ChannelManager::userAuthorizedUpdate", accounts => {
         init.threadRoot,
         init.threadCount,
         init.timeout,
-        init.sigUser
+        init.sigHub,
+        { from: accounts[1] }
       )
     })
   })
@@ -218,7 +219,7 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
 
   beforeEach(async () => {
     init = {
-      "user" : [accounts[0], accounts[1]],
+      "user" : [accounts[1], accounts[2]],
       "weiBalances" : [0, 0],
       "tokenBalances" : [0, 0],
       "pendingWeiUpdates" : [0, 0, 0, 0],
@@ -245,7 +246,7 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
         init.timeout
       )
       const signatureHub = await web3.eth.accounts.sign(hash, privKeys[0])
-      const signatureUser = await web3.eth.accounts.sign(hash, privKeys[0])
+      const signatureUser = await web3.eth.accounts.sign(hash, privKeys[1])
 
       init.sigHub = signatureHub.signature
       init.sigUser = signatureUser.signature
