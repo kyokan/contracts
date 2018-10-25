@@ -2,7 +2,7 @@
 
 # Running the test suite
 
-Use the scripts in the package.json to ensure the proper versions of the dev dependencies:
+Use the scripts in the package.json to ensure the proper test environment:
 ```
 # Node and npm versions:
 # node >= v10
