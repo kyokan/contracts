@@ -79,7 +79,7 @@ async function updateHash(data, key) {
     data.threadCount,
     data.timeout
   )
-  const sig = await web3.eth.accounts.sign(hash, key)
+  const sig = await web3.eth.accounts.sign(hash, privKeys[accountIndex])
   return sig.signature
 }
 
@@ -980,4 +980,5 @@ contract("ChannelManager::nukeThreads", accounts => {
     })
   })
 });
+
 */
