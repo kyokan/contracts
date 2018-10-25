@@ -8,9 +8,9 @@ Hub/Wallet API spec:
 
 [https://paper.dropbox.com/doc/SpankPay-BOOTY-Drop-2-Hub-Client-APIs--AP3nxlvN~p_IZ_a8UR2C~qshAg-Xon50NikF2iCjTD72vU0g](https://paper.dropbox.com/doc/SpankPay-BOOTY-Drop-2-Hub-Client-APIs--AP3nxlvN~p_IZ_a8UR2C~qshAg-Xon50NikF2iCjTD72vU0g)
 
-Contract: [https://github.com/ConnextProject/contracts/blob/merge-refucktor/contracts/ChannelManager.sol](https://github.com/ConnextProject/contracts/blob/merge-refucktor/contracts/ChannelManager.sol)
+Contract: [https://github.com/ConnextProject/contracts/blob/master/contracts/ChannelManager.sol](https://github.com/ConnextProject/contracts/blob/master/contracts/ChannelManager.sol)
 
-Flowcharts: [https://github.com/ConnextProject/contracts/tree/merge-refucktor/docs/diagrams](https://github.com/ConnextProject/contracts/tree/merge-refucktor/docs/diagrams)
+Flowcharts: [https://github.com/ConnextProject/contracts/tree/master/docs/diagrams](https://github.com/ConnextProject/contracts/tree/master/docs/diagrams)
 
 # Channel Manager v1
 
@@ -51,7 +51,7 @@ In the first phase, parties sign an offchain update adding the amount to be depo
     pendingWeiUpdates: [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
     pendingTokenUpdates: [hubDeposit, hubWithdrawal, userDeposit, userWithdrawal]
 
-The "pending" portion of the `txCount` (which is now a `uint256[2]`, explained below) is incremented and, for a withdrawal, the parties would remove the net (withdraw - deposit) pending value to be taken out of the channel. This ensures that the offchain balance *always* tracks the amount of value in the channel that could be transacted without risking a double spend. For more information, see: [https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md)
+The "pending" portion of the `txCount` (which is now a `uint256[2]`, explained below) is incremented and, for a withdrawal, the parties would remove the net (withdraw - deposit) pending value to be taken out of the channel. This ensures that the offchain balance *always* tracks the amount of value in the channel that could be transacted without risking a double spend. For more information, see: [https://github.com/ConnextProject/contracts/blob/master/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/master/docs/aggregateUpdates.md)
 
 In the second phase, this signed state is broadcast onchain (via the  `hubAuthorizedUpdate` or `userAuthorizedUpdate` smart contract methods), and the pending transactions are executed (ie, ETH and tokens are transferred). Note that this allows a single onchain transaction to perform deposits, withdrawals, and transfers, facilitating single-transaction ETH/ERC20 swaps.
 
@@ -285,7 +285,7 @@ Performers can withdraw from channels using the same mechanism regardless of whe
 
 Note that the deposit and withdraw are both happening on the performer's side of the channel and that the weiBalances remain zero. This is because setting `weiBalances[1]` to `0.5` would violate the `"wei must be conserved"` requirement on the contract. By depositing and withdrawing from the same side, the channel's pending balance is first incremented by 0.5 ETH and then reduced by 0.5 ETH for the performer, allowing them to withdraw ETH directly from the Hub's in-contract balance if they have permission. Dope.
 
-For more info on calculating balances for deposit/withdraw states, see: [https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md)
+For more info on calculating balances for deposit/withdraw states, see: [https://github.com/ConnextProject/contracts/blob/master/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/master/docs/aggregateUpdates.md)
 
 3. Upon receiving the state update, the performer's wallet needs to validate the following:
     - The withdrawal amount matches the user's request
@@ -1287,7 +1287,7 @@ Internal function that merges any unmerged updates (i.e. deposits) into the prop
 1. If the deposit is greater than the withdrawal, adds the net of deposit minus withdrawal to the balances. (Assumes the net has *not yet* been added to the balances.
 2. Otherwise, if the deposit is less than or equal to the withdrawal, leaves balances as is. (Assumes the net has *already* been added to the balances.
 
-More info: [https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/merge-refucktor/docs/aggregateUpdates.md)
+More info: [https://github.com/ConnextProject/contracts/blob/master/docs/aggregateUpdates.md](https://github.com/ConnextProject/contracts/blob/master/docs/aggregateUpdates.md)
 
 ```
     function _applyPendingUpdates(
