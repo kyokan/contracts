@@ -79,7 +79,7 @@ async function updateHash(data, key) {
     data.threadCount,
     data.timeout
   )
-  const sig = await web3.eth.accounts.sign(hash, privKeys[accountIndex])
+  const sig = await web3.eth.accounts.sign(hash, key)
   return sig.signature
 }
 
