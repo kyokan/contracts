@@ -209,7 +209,8 @@ contract ChannelManager {
             threadCount,
             timeout,
             "", // skip hub sig verification
-            sigUser
+            sigUser,
+            [false, true] // [checkHubSig?, checkUser] <- only need to check user
         );
 
         _updateChannelBalances(channel, weiBalances, tokenBalances, pendingWeiUpdates, pendingTokenUpdates);
@@ -274,7 +275,8 @@ contract ChannelManager {
             threadCount,
             timeout,
             sigHub,
-            "" // skip user sig verification
+            "", // skip user sig verification
+            [true, false] // [checkHubSig?, checkUser] <- only need to check hub
         );
 
         // transfer user token deposit to this contract
@@ -364,7 +366,8 @@ contract ChannelManager {
             threadCount,
             timeout,
             sigHub,
-            sigUser
+            sigUser,
+            [true, true] // [checkHubSig?, checkUser] <- check both sigs
         );
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
@@ -391,7 +394,7 @@ contract ChannelManager {
 
         channel.exitInitiator = msg.sender;
         channel.channelClosingTime = now.add(challengePeriod);
-        channel.status == Status.ChannelDispute;
+        channel.status = Status.ChannelDispute;
 
         emit DidStartExitChannel(
             user[0],
@@ -438,7 +441,8 @@ contract ChannelManager {
             threadCount,
             timeout,
             sigHub,
-            sigUser
+            sigUser,
+            [true, true] // [checkHubSig?, checkUser] <- check both sigs
         );
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
@@ -483,10 +487,10 @@ contract ChannelManager {
 
         if (channel.threadCount > 0) {
             channel.threadClosingTime = now.add(challengePeriod);
-            channel.status == Status.ThreadDispute;
+            channel.status = Status.ThreadDispute;
         } else {
             channel.threadClosingTime = 0;
-            channel.status == Status.Open;
+            channel.status = Status.Open;
         }
 
         channel.exitInitiator = address(0x0);
@@ -533,10 +537,10 @@ contract ChannelManager {
 
         if (channel.threadCount > 0) {
             channel.threadClosingTime = now.add(challengePeriod);
-            channel.status == Status.ThreadDispute;
+            channel.status = Status.ThreadDispute;
         } else {
             channel.threadClosingTime = 0;
-            channel.status == Status.Open;
+            channel.status = Status.Open;
         }
 
         channel.exitInitiator = address(0x0);
@@ -991,7 +995,8 @@ contract ChannelManager {
         uint256 threadCount,
         uint256 timeout,
         string sigHub,
-        string sigUser
+        string sigUser,
+        bool[2] checks // [checkHubSig?, checkUserSig?]
     ) internal view {
         require(user[0] != hub, "user can not be hub");
 
@@ -1011,11 +1016,11 @@ contract ChannelManager {
             )
         );
 
-        if (keccak256(sigHub) != keccak256("")) {
+        if (checks[0]) {
             require(hub == ECTools.recoverSigner(state, sigHub), "hub signature invalid");
         }
 
-        if (keccak256(sigUser) != keccak256("")) {
+        if (checks[1]) {
             require(user[0] == ECTools.recoverSigner(state, sigUser), "user signature invalid");
         }
     }
