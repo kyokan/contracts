@@ -1,5 +1,5 @@
 const EC = artifacts.require("./ECTools.sol");
-const LC = artifacts.require("./ChannelManager.sol");
+const CM = artifacts.require("./ChannelManager.sol");
 const StandardToken = artifacts.require("./StandardToken.sol");
 
 module.exports = async function(deployer, network, accounts) {
@@ -20,11 +20,17 @@ module.exports = async function(deployer, network, accounts) {
     tokenAddress = standardToken.address;
   }
 
-  await deployer.link(EC, LC);
-  await deployer.deploy(
-    LC,
+  await deployer.link(EC, CM);
+  const cm = await deployer.deploy(
+    CM,
     accounts[0],
     10000,
     tokenAddress
   );
+
+  console.log('====================================================')
+  console.log('   BOOTY Token:', tokenAddress)
+  console.log('ChannelManager:', await cm.address)
+  console.log('           Hub:', await accounts[0])
+  console.log('====================================================')
 };
