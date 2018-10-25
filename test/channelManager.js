@@ -118,7 +118,7 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
 
     beforeEach(async () => {
       init = {
-        "user" : accounts[0],
+        "user" : accounts[1],
         "recipient" : accounts[1],
         "weiBalances" : [0, 0],
         "tokenBalances" : [0, 0],
@@ -162,7 +162,7 @@ contract("ChannelManager::userAuthorizedUpdate", accounts => {
     let hash, init
     beforeEach(async () => {
       init = {
-        "user" : accounts[0],
+        "user" : accounts[1],
         "recipient" : accounts[1],
         "weiBalances" : [0, 0],
         "tokenBalances" : [0, 0],
@@ -218,7 +218,7 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
 
   beforeEach(async () => {
     init = {
-      "user" : [accounts[0], accounts[1]],
+      "user" : [accounts[1], accounts[2]],
       "weiBalances" : [0, 0],
       "tokenBalances" : [0, 0],
       "pendingWeiUpdates" : [0, 0, 0, 0],
