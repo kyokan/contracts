@@ -210,7 +210,7 @@ contract ChannelManager {
             timeout,
             "", // skip hub sig verification
             sigUser,
-            [false, true] // [checkHub, checkUser] <- only need to check user
+            [false, true] // [checkHubSig?, checkUser] <- only need to check user
         );
 
         _updateChannelBalances(channel, weiBalances, tokenBalances, pendingWeiUpdates, pendingTokenUpdates);
@@ -276,7 +276,7 @@ contract ChannelManager {
             timeout,
             sigHub,
             "", // skip user sig verification
-            [true, false] // [checkHub, checkUser] <- only need to check hub
+            [true, false] // [checkHubSig?, checkUser] <- only need to check hub
         );
 
         // transfer user token deposit to this contract
@@ -367,7 +367,7 @@ contract ChannelManager {
             timeout,
             sigHub,
             sigUser,
-            [true, true] // [checkHub, checkUser] <- check both sigs
+            [true, true] // [checkHubSig?, checkUser] <- check both sigs
         );
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
@@ -442,7 +442,7 @@ contract ChannelManager {
             timeout,
             sigHub,
             sigUser,
-            [true, true] // [checkHub, checkUser] <- check both sigs
+            [true, true] // [checkHubSig?, checkUser] <- check both sigs
         );
 
         require(txCount[0] > channel.txCount[0], "global txCount must be higher than the current global txCount");
@@ -996,7 +996,7 @@ contract ChannelManager {
         uint256 timeout,
         string sigHub,
         string sigUser,
-        bool[2] checks
+        bool[2] checks // [checkHubSig?, checkUserSig?]
     ) internal view {
         require(user[0] != hub, "user can not be hub");
 
