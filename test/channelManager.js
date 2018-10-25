@@ -83,10 +83,6 @@ async function updateHash(data, key) {
   return sig.signature
 }
 
-async function userDeposit(recipient, weiBalances, tokenBalances, pendingWeiUpdates, pendingTokenUpdates, txCount, threadRoot, threadCount, timeout) {
-  await channelManager.userAuthorizedUpdate()
-}
-
 async function hubDeposit(user, userPrivKey, recipient, numThreads) {
   const init = {
     "user" : user,
@@ -364,7 +360,6 @@ contract("ChannelManager::hubAuthorizedUpdate", accounts => {
 
   })
 });
-
 
 contract("ChannelManager::userAuthorizedUpdate", accounts => {
   let hub, alice, bob, init
@@ -810,45 +805,64 @@ contract("ChannelManager::emptyChannelWithChallenge", accounts => {
       await emptyChannelWithChallenge(init, charlie.address).should.be.rejectedWith('tokens must be conserved')
     })
 
-    // it("FAIL: ETH transfer", async() => {
-    //   init.user = dan.address
-    //   init.tokenBalances = [0,1]
-    //   init.sigHub = await updateHash(init, hub.privateKey)
-    //   init.sigUser = await updateHash(init, dan.privateKey)
-    //   await userAuthorizedUpdate(init, hub.address)
-    //   await emptyChannelWithChallenge(init, dan.address).should.be.rejectedWith('tokens must be conserved')
-    // })
-
-    // it("happy case", async() => {
-    //   init.sigHub = await updateHash(init, hub.privateKey)
-    //   init.sigUser = await updateHash(init, alice.privateKey)
-      
-    //   await channelManager.startExit(alice.address)
-    //   await emptyChannelWithChallenge(init, alice.address)
-    // })
-  })
-});
-
-/*
-// TODO
-contract("ChannelManager::emptyChannel", accounts => {
-  before('deploy contracts', async () => {
-    channelManager = await Ledger.deployed()
-  })  
-
-  describe('emptyChannel', () => {
     it("happy case", async() => {
-      await channelManager.startExit(
-        accounts[0]
-      )
-      await moveForwardSecs(config.timeout + 1)
-      await channelManager.emptyChannel(
-        accounts[0]
-      )
+      const weiDeposit = 100
+      init.txCount = [1,1]
+      init.user = dan.address
+      init.pendingWeiUpdates = [0,0,weiDeposit,0]
+      init.tokenBalances = [0,0]
+      init.sigHub = await updateHash(init, hub.privateKey)
+      init.sigUser = await updateHash(init, dan.privateKey)
+      await userAuthorizedUpdate(init, dan.address, weiDeposit)
+      
+      await channelManager.startExit(dan.address)
+      
+      init.txCount = [2,1]
+      init.sigHub = await updateHash(init, hub.privateKey)
+      init.sigUser = await updateHash(init, dan.privateKey)
+      await emptyChannelWithChallenge(init, dan.address) //.should.be.rejectedWith('tokens must be conserved')
     })
   })
 });
 
+
+// TODO
+contract("ChannelManager::emptyChannel", accounts => {
+  let hub, alice, bob, charlie, dan, init
+  before('deploy contracts', async () => {
+    channelManager = await Ledger.deployed()
+    hub = {
+      address: accounts[0],
+      privateKey : privKeys[0]
+    }
+    alice = {
+      address: accounts[1],
+      privateKey : privKeys[1]
+    }
+    bob = {
+      address: accounts[2],
+      privateKey : privKeys[2]
+    }
+  })  
+
+  describe('emptyChannel', () => {
+    it("FAIL : channel not in dispute", async() => {
+      await channelManager.emptyChannel(hub.address).should.be.rejectedWith('channel must be in dispute')
+    })
+
+    it("FAIL : channel closing time not passed", async() => {
+      await channelManager.startExit(hub.address)
+      await channelManager.emptyChannel(hub.address).should.be.rejectedWith('channel closing time must have passed')
+    })
+
+    it("happy case", async() => {
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(hub.address)
+    })
+  })
+});
+
+/*
 // TODO
 contract("ChannelManager::startExitThread", accounts => {
   let hub, alice, bob, init
