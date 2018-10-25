@@ -1012,11 +1012,11 @@ contract ChannelManager {
         );
 
         if (keccak256(sigHub) != keccak256("")) {
-            require(hub == ECTools.recoverSigner(state, sigHub));
+            require(hub == ECTools.recoverSigner(state, sigHub), "hub signature invalid");
         }
 
         if (keccak256(sigUser) != keccak256("")) {
-            require(user[0] == ECTools.recoverSigner(state, sigUser));
+            require(user[0] == ECTools.recoverSigner(state, sigUser), "user signature invalid");
         }
     }
 
