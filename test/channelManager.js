@@ -994,4 +994,5 @@ contract("ChannelManager::nukeThreads", accounts => {
     })
   })
 });
+
 */
