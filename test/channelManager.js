@@ -6,7 +6,7 @@ const Utils = require("./helpers/utils");
 const Ledger = artifacts.require("./ChannelManager.sol");
 const EC = artifacts.require("./ECTools.sol");
 const Token = artifacts.require("./lib/StandardToken.sol");
-const Connext = require("connext");
+const Connext = require("./client/src/Utils.ts");
 const privKeys = require("./privKeys.json")
 
 const config = require("../config.json")
@@ -40,19 +40,12 @@ async function moveForwardSecs(secs) {
   return true
 }
 
-function generateProof(threadHashToProve, threadInitStates) {
-  const merkle = Connext.generateMerkleTree(threadInitStates);
-  const mproof = merkle.proof(Utils.hexToBuffer(threadHashToProve));
+function generateThreadProof(threadHashToProve, threadInitStates) {
+  return await connext.generateThreadProof(threadHashToProve, threadInitStates)
+}
 
-  let proof = [];
-  for (var i = 0; i < mproof.length; i++) {
-    proof.push(Utils.bufferToHex(mproof[i]));
-  }
-
-  proof.unshift(vcHashToProve);
-
-  proof = Utils.marshallState(proof);
-  return proof;
+function generateThreadRootHash(threadInitStates){
+  return await connext.generateThreadRootHash(threadInitStates)
 }
 
 function getEventParams(tx, event) {
