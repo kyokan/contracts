@@ -576,8 +576,6 @@ contract('ChannelManager', (accounts) => {
   })
   
   describe("startExit", () => {
-    let init
-
     it("FAIL : not user or hub", async() => {
       await channelManager.startExit(
         hub.address,
@@ -586,15 +584,12 @@ contract('ChannelManager', (accounts) => {
     })
 
     it("happy case", async() => {
-      await channelManager.startExit(
-        hub.address
-      )
+      await channelManager.startExit(hub.address)
     })
 
     it("FAIL : channel not open", async() => {
-      await channelManager.startExit(
-        hub.address
-      ).should.be.rejectedWith('channel must be open')
+      await channelManager.startExit(hub.address)
+      await channelManager.startExit(hub.address).should.be.rejectedWith('channel must be open')
     })
   });
   
