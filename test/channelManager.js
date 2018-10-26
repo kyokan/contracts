@@ -1170,7 +1170,7 @@ contract("ChannelManager::emptyThread", accounts => {
     }
   })  
 
-  describe.only('emptyThread', () => {
+  describe('emptyThread', () => {
     it("happy path", async () => {
       init.user = alice.address
       init.receiver = bob.address
