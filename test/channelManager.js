@@ -7,6 +7,7 @@ const Ledger = artifacts.require("./ChannelManager.sol");
 const EC = artifacts.require("./ECTools.sol");
 const Token = artifacts.require("./lib/StandardToken.sol");
 const Connext = require("./client/src/Utils.ts");
+const Connext = require("../client/dist/Utils.js");
 const privKeys = require("./privKeys.json")
 
 const config = require("../config.json")
