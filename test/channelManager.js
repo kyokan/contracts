@@ -557,7 +557,6 @@ contract("ChannelManager::startExit", accounts => {
 contract("ChannelManager::startExitWithUpdate", accounts => {
   let hub, alice, bob, init
   before('deploy contracts', async () => {
-    channelManager = await Ledger.deployed()
     hub = {
       address: accounts[0],
       privateKey : privKeys[0]
@@ -585,82 +584,108 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
       "threadCount" : 0,
       "timeout" : 0
     }
-  })  
+  })
 
   describe('startExitWithUpdate', () => {
-    it("happy case", async() => {
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
+    contract('', async () => {
+      it("happy case", async() => {
+        channelManager = await Ledger.deployed()
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
 
-      await startExitWithUpdate(init, hub.address)
+        await startExitWithUpdate(init, hub.address)
+      })
     })
 
-    it("FAIL : not user or hub", async() => {
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
-      
-      await startExitWithUpdate(init, bob.address).should.be.rejectedWith('exit initiator must be user or hub')
+    contract('', async () => {
+      it("FAIL : not user or hub", async() => {
+        channelManager = await Ledger.deployed()
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
+        
+        await startExitWithUpdate(init, bob.address).should.be.rejectedWith('exit initiator must be user or hub')
+      })
     })
 
-    it("FAIL : timeout not zero", async() => {
-      init.timeout = 1
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
+    contract('', async () => {
+      it("FAIL : timeout not zero", async() => {
+        channelManager = await Ledger.deployed()
+        init.timeout = 1
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
 
-      await startExitWithUpdate(init, hub.address).should.be.rejectedWith('can\'t start exit with time-sensitive states')
+        await startExitWithUpdate(init, hub.address).should.be.rejectedWith('can\'t start exit with time-sensitive states')
+      })
     })
 
-    it("FAIL: _verifySig: user is hub", async() => {
-      init.user = hub.address
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
+    contract('', async () => {
+      it("FAIL: _verifySig: user is hub", async() => {
+        channelManager = await Ledger.deployed()
+        init.user = hub.address
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
 
-      await startExitWithUpdate(init, hub.address).should.be.rejectedWith('user can not be hub')
+        await startExitWithUpdate(init, hub.address).should.be.rejectedWith('user can not be hub')
+      })
     })
 
-    it("FAIL: _verifyAuthorizedUpdate: global txCount", async() => {
-      init.txCount = [1,1]
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
+    contract('', async () => {
+      it("FAIL: _verifyAuthorizedUpdate: global txCount", async() => {
+        channelManager = await Ledger.deployed()
+        init.txCount = [1,1]
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
 
-      await startExitWithUpdate(init, hub.address).should.be.rejectedWith('global txCount must be higher than the current global txCount')
+        await startExitWithUpdate(init, hub.address).should.be.rejectedWith('global txCount must be higher than the current global txCount')
+      })
     })
 
-    it("FAIL: _verifyAuthorizedUpdate: onchain txCount", async() => {
-      init.txCount = [2,0]
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
+    contract('', async () => {
+      it("FAIL: _verifyAuthorizedUpdate: onchain txCount", async() => {
+        channelManager = await Ledger.deployed()
+        init.txCount = [2,0]
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
 
-      await startExitWithUpdate(init, hub.address).should.be.rejectedWith('onchain txCount must be higher or equal to the current onchain txCount')
+        await startExitWithUpdate(init, hub.address).should.be.rejectedWith('onchain txCount must be higher or equal to the current onchain txCount')
+      })
     })
 
-    it("FAIL: _verifyAuthorizedUpdate: wei conservation", async() => {
-      init.txCount = [2,1]
-      init.weiBalances = [0, 1]
-      
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
-      await startExitWithUpdate(init, hub.address).should.be.rejectedWith('wei must be conserved')
+    contract('', async () => {
+      it("FAIL: _verifyAuthorizedUpdate: wei conservation", async() => {
+        channelManager = await Ledger.deployed()
+        init.txCount = [2,1]
+        init.weiBalances = [0, 1]
+        
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
+        await startExitWithUpdate(init, hub.address).should.be.rejectedWith('wei must be conserved')
+      })
     })
 
-    it("FAIL: _verifyAuthorizedUpdate: token conservation", async() => {
-      init.txCount = [2,1]
-      init.tokenBalances = [0, 1]
-      
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
-      await startExitWithUpdate(init, hub.address).should.be.rejectedWith('tokens must be conserved')
+    contract('', async () => {
+      it("FAIL: _verifyAuthorizedUpdate: token conservation", async() => {
+        channelManager = await Ledger.deployed()
+        init.txCount = [2,1]
+        init.tokenBalances = [0, 1]
+        
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
+        await startExitWithUpdate(init, hub.address).should.be.rejectedWith('tokens must be conserved')
+      })
     })
 
 
-    it("FAIL: channel not open", async() => {
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
-      
-      await channelManager.startExit(alice.address) // channel.status = Status.ChannelDispute
-      await startExitWithUpdate(init, hub.address).should.be.rejectedWith('channel must be open')
+    contract('', async () => {
+      it("FAIL: channel not open", async() => {
+        channelManager = await Ledger.deployed()
+        init.sigHub = await updateHash(init, hub.privateKey)
+        init.sigUser = await updateHash(init, alice.privateKey)
+        
+        await channelManager.startExit(alice.address) // channel.status = Status.ChannelDispute
+        await startExitWithUpdate(init, hub.address).should.be.rejectedWith('channel must be open')
+      })
     })
-
   })
 });
 
