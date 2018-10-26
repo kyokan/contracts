@@ -1141,21 +1141,6 @@ contract("ChannelManager::fastEmptyThread", accounts => {
   })
 });
 
-// TODO
-contract("ChannelManager::emptyThread", accounts => {
-  before('deploy contracts', async () => {
-    channelManager = await Ledger.deployed()
-  })  
-
-  describe('emptyThread', () => {
-    it("happy case", async() => {
-      await channelManager.emptyThread(
-        accounts[0]
-      )
-    })
-  })
-});
-
 */
 
 contract("ChannelManager::emptyThread", accounts => {
@@ -1200,3 +1185,20 @@ contract("ChannelManager::emptyThread", accounts => {
     })
   })
 });
+
+/*
+// TODO
+contract("ChannelManager::nukeThreads", accounts => {
+  before('deploy contracts', async () => {
+    channelManager = await Ledger.deployed()
+  })
+
+  describe('nukeThreads', () => {
+    it("happy case", async() => {
+      await channelManager.nukeThreads(
+        accounts[0]
+      )
+    })
+  })
+});
+*/
