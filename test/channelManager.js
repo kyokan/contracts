@@ -1166,7 +1166,7 @@ contract("ChannelManager::emptyThread", accounts => {
     }
   })
 
-  describe.only('emptyThread', () => {
+  describe('emptyThread', () => {
     it("FAIL: channel must be in thread dispute", async () => {
       init.user = alice.address
       init.receiver = bob.address
