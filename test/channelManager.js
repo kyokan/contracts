@@ -1027,7 +1027,7 @@ contract('ChannelManager', (accounts) => {
   
   */
   
-  describe("ChannelManager::emptyThread", accounts => {
+  describe("emptyThread", accounts => {
     let init
   
     beforeEach(async () => {
@@ -1051,18 +1051,36 @@ contract('ChannelManager', (accounts) => {
     })
 
     it("FAIL: thread closing time must have passed", async () => {
+      init.user = alice.address
+      init.receiver = bob.address
+      await hubDeposit(alice.address, alice.privateKey, bob.address, 2)
+      await channelManager.startExit(alice.address)
       await moveForwardSecs(config.timeout + 1)
       await channelManager.emptyChannel(alice.address)
       await emptyThread(init, hub.address).should.be.rejectedWith('thread closing time must have passed')
     })
 
     it("FAIL: thread closing time must have passed", async () => {
+      init.user = alice.address
+      init.receiver = bob.address
+      await hubDeposit(alice.address, alice.privateKey, bob.address, 2)
+      await channelManager.startExit(alice.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(alice.address)
       init.sig = await updateThreadHash(init, hub.privateKey)
       await startExitThread(init, hub.address)
       await emptyThread(init, hub.address).should.be.rejectedWith('thread closing time must have passed')
     })
 
     it("happy path", async () => {
+      init.user = alice.address
+      init.receiver = bob.address
+      await hubDeposit(alice.address, alice.privateKey, bob.address, 2)
+      await channelManager.startExit(alice.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(alice.address)
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, hub.address)
       await moveForwardSecs(config.timeout + 1)
       await emptyThread(init, hub.address)
     })
