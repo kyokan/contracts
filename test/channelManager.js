@@ -1159,6 +1159,9 @@ contract("ChannelManager::emptyThread", accounts => {
       address: accounts[2],
       privateKey: privKeys[2]
     }
+  })
+
+  beforeEach(async () => {
     init = {
       "user" : alice.address,
       "sender" : hub.address,
@@ -1168,18 +1171,30 @@ contract("ChannelManager::emptyThread", accounts => {
       "txCount" : 2,
       "proof" : emptyRootHash
     }
-  })  
+  })
 
-  describe('emptyThread', () => {
-    it("happy path", async () => {
+  describe.only('emptyThread', () => {
+    it("FAIL: channel must be in thread dispute", async () => {
       init.user = alice.address
       init.receiver = bob.address
       await hubDeposit(alice.address, alice.privateKey, bob.address, 2)
       await channelManager.startExit(alice.address)
+      await emptyThread(init, hub.address).should.be.rejectedWith('channel must be in thread dispute')
+    })
+
+    it("FAIL: thread closing time must have passed", async () => {
       await moveForwardSecs(config.timeout + 1)
       await channelManager.emptyChannel(alice.address)
+      await emptyThread(init, hub.address).should.be.rejectedWith('thread closing time must have passed')
+    })
+
+    it("FAIL: thread closing time must have passed", async () => {
       init.sig = await updateThreadHash(init, hub.privateKey)
       await startExitThread(init, hub.address)
+      await emptyThread(init, hub.address).should.be.rejectedWith('thread closing time must have passed')
+    })
+
+    it("happy path", async () => {
       await moveForwardSecs(config.timeout + 1)
       await emptyThread(init, hub.address)
     })
