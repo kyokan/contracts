@@ -210,6 +210,15 @@ async function startExitThread(data, user) {
   )
 }
 
+async function emptyThread(data, user) {
+  await channelManager.emptyThread(
+    data.user,
+    data.sender,
+    data.receiver,
+    {from: user}
+  )
+}
+
 async function startExitThreadWithUpdate(data, user) {
   await channelManager.startExitThreadWithUpdate(
     data.user,
@@ -1147,18 +1156,47 @@ contract("ChannelManager::emptyThread", accounts => {
   })
 });
 
-// TODO
+*/
+
 contract("ChannelManager::nukeThreads", accounts => {
+  let hub, alice, bob, init
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
+    hub = {
+      address: accounts[0],
+      privateKey: privKeys[0]
+    }
+    alice = {
+      address: accounts[1],
+      privateKey: privKeys[1]
+    }
+    bob = {
+      address: accounts[2],
+      privateKey: privKeys[2]
+    }
+    init = {
+      "user" : alice.address,
+      "sender" : hub.address,
+      "receiver" : bob.address,
+      "weiBalances" : [0, 0],
+      "tokenBalances" : [0, 0],
+      "txCount" : 2,
+      "proof" : emptyRootHash
+    }
   })  
 
-  describe('nukeThreads', () => {
-    it("happy case", async() => {
-      await channelManager.nukeThreads(
-        accounts[0]
-      )
+  describe.only('emptyThread', () => {
+    it("happy path", async () => {
+      init.user = alice.address
+      init.receiver = bob.address
+      await hubDeposit(alice.address, alice.privateKey, bob.address, 2)
+      await channelManager.startExit(alice.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(alice.address)
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, hub.address)
+      await moveForwardSecs(config.timeout + 1)
+      await emptyThread(init, hub.address)
     })
   })
 });
-*/
