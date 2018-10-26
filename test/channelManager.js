@@ -1158,7 +1158,7 @@ contract("ChannelManager::emptyThread", accounts => {
 
 */
 
-contract("ChannelManager::nukeThreads", accounts => {
+contract("ChannelManager::emptyThread", accounts => {
   let hub, alice, bob, init
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
