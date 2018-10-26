@@ -68,7 +68,7 @@ function getEventParams(tx, event) {
 // NOTE : hub : accounts[0], privKeys[0]
 
 contract('ChannelManager', (accounts) => {
-  let snapshotId, channelManager, token, hub, alice, bob, charlie, dan, elon, fred, greg, hank
+  let snapshotId, channelManager, token, hub, alice, bob, charlie, chad, dan, elon, fred, greg, hank
   
   async function updateHash(data, privateKey) {
     const hash = await web3.utils.soliditySha3(
@@ -257,6 +257,10 @@ contract('ChannelManager', (accounts) => {
     charlie = {
       address: accounts[3],
       privateKey : privKeys[3]
+    }
+    chad = {
+      address: accounts[3],
+      privateKey: privKeys[3]
     }
     dan = {
       address: accounts[4],
