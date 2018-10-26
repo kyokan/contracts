@@ -66,7 +66,7 @@ function getEventParams(tx, event) {
   return false
 }
 
-async function updateHash(data, key) {
+async function updateHash(data, privateKey) {
   const hash = await web3.utils.soliditySha3(
     channelManager.address,
     {type: 'address[2]', value: [data.user, data.recipient]},
@@ -79,16 +79,30 @@ async function updateHash(data, key) {
     data.threadCount,
     data.timeout
   )
-  const sig = await web3.eth.accounts.sign(hash, key)
+  const sig = await web3.eth.accounts.sign(hash, privateKey)
   return sig.signature
 }
 
-async function hubDeposit(user, userPrivKey, recipient, numThreads) {
+async function updateThreadHash(data, privateKey) {
+  const hash = await web3.utils.soliditySha3(
+    channelManager.address,
+    {type: 'address', value: data.user},
+    {type: 'address', value: data.sender},
+    {type: 'address', value: data.receiver},
+    {type: 'uint256[2]', value: data.weiBalances},
+    {type: 'uint256[2]', value: data.tokenBalances},
+    {type: 'uint256[2]', value: data.txCount}
+  )
+  const sig = await web3.eth.accounts.sign(hash, privateKey)
+  return sig.signature
+}
+
+async function hubDeposit(user, userPrivKey, recipient, numThreads, weiBalances=[0,0], tokenBalances=[0,0]) {
   const init = {
     "user" : user,
     "recipient" : recipient,
-    "weiBalances" : [0, 0],
-    "tokenBalances" : [0, 0],
+    "weiBalances" : weiBalances,
+    "tokenBalances" : tokenBalances,
     "pendingWeiUpdates" : [0, 0, 0, 0],
     "pendingTokenUpdates" : [0, 0, 0, 0],
     "txCount" : [1,1],
@@ -147,22 +161,6 @@ async function hubAuthorizedUpdate(data, hub) {
   )
 }
 
-async function startExitWithUpdate(data, user) {
-  await channelManager.startExitWithUpdate(
-    [data.user, data.recipient], 
-    data.weiBalances,
-    data.tokenBalances,
-    data.pendingWeiUpdates,
-    data.pendingTokenUpdates,
-    data.txCount,
-    data.threadRoot,
-    data.threadCount,
-    data.timeout,
-    data.sigHub,
-    data.sigUser,
-    {from:user}
-  ) 
-}
 
 async function emptyChannelWithChallenge(data, user) {
   await channelManager.emptyChannelWithChallenge(
@@ -180,6 +178,54 @@ async function emptyChannelWithChallenge(data, user) {
     {from: user}
   )
 }
+
+async function startExitWithUpdate(data, user) {
+  await channelManager.startExitWithUpdate(
+    [data.user, data.recipient], 
+    data.weiBalances,
+    data.tokenBalances,
+    data.pendingWeiUpdates,
+    data.pendingTokenUpdates,
+    data.txCount,
+    data.threadRoot,
+    data.threadCount,
+    data.timeout,
+    data.sigHub,
+    data.sigUser,
+    {from:user}
+  ) 
+}
+
+async function startExitThread(data, user) {
+  await channelManager.startExitThread(
+    data.user,
+    data.sender,
+    data.receiver,
+    data.weiBalances,
+    data.tokenBalances,
+    data.txCount,
+    data.proof,
+    data.sig,
+    {from: user}
+  )
+}
+
+async function startExitThreadWithUpdate(data, user) {
+  await channelManager.startExitThreadWithUpdate(
+    data.user,
+    [data.sender,data.receiver],
+    data.weiBalances,
+    data.tokenBalances,
+    data.txCount,
+    data.proof,
+    data.sig,
+    data.updatedWeiBalances,
+    data.updatedTokenBalances,
+    data.updatedTxCount,
+    {from: user}
+  )
+}
+
 
 // NOTE : ganache-cli -m 'refuse result toy bunker royal small story exhaust know piano base stand'
 
@@ -555,7 +601,7 @@ contract("ChannelManager::startExit", accounts => {
 });
 
 contract("ChannelManager::startExitWithUpdate", accounts => {
-  let hub, alice, bob, init
+  let hub, alice, bob, charlie, init
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
     hub = {
@@ -569,6 +615,10 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
     bob = {
       address: accounts[2],
       privateKey : privKeys[2]
+    }
+    charlie = {
+      address: accounts[3],
+      privateKey : privKeys[3]
     }
   })  
 
@@ -589,8 +639,9 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
 
   describe('startExitWithUpdate', () => {
     it("happy case", async() => {
+      init.user = charlie.address
       init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
+      init.sigUser = await updateHash(init, charlie.privateKey)
 
       await startExitWithUpdate(init, hub.address)
     })
@@ -619,20 +670,24 @@ contract("ChannelManager::startExitWithUpdate", accounts => {
     })
 
     it("FAIL: _verifyAuthorizedUpdate: global txCount", async() => {
-      init.txCount = [1,1]
+      init.txCount = [0,1]
       init.sigHub = await updateHash(init, hub.privateKey)
       init.sigUser = await updateHash(init, alice.privateKey)
 
       await startExitWithUpdate(init, hub.address).should.be.rejectedWith('global txCount must be higher than the current global txCount')
     })
 
-    it("FAIL: _verifyAuthorizedUpdate: onchain txCount", async() => {
-      init.txCount = [2,0]
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, alice.privateKey)
+    // it("FAIL: _verifyAuthorizedUpdate: onchain txCount", async() => {
+    //   const weiDeposit = 1
+    //   init.user = bob.address
+    //   init.txCount = [2,0]
+    //   init.pendingWeiUpdates = [0,0,weiDeposit,0]
+    //   init.sigHub = await updateHash(init, hub.privateKey)
+    //   init.sigUser = await updateHash(init, alice.privateKey)
 
-      await startExitWithUpdate(init, hub.address).should.be.rejectedWith('onchain txCount must be higher or equal to the current onchain txCount')
-    })
+    //   await userAuthorizedUpdate(init, bob.address, weiDeposit)
+    //   await startExitWithUpdate(init, hub.address).should.be.rejectedWith('onchain txCount must be higher or equal to the current onchain txCount')
+    // })
 
     it("FAIL: _verifyAuthorizedUpdate: wei conservation", async() => {
       init.txCount = [2,1]
@@ -778,25 +833,7 @@ contract("ChannelManager::emptyChannelWithChallenge", accounts => {
       await emptyChannelWithChallenge(init, charlie.address).should.be.rejectedWith('wei must be conserved')
     })
 
-    it("FAIL: wei conservation", async() => {
-      init.txCount = [2,1]
-      init.user = charlie.address
-      init.tokenBalances = [0,1]
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, charlie.privateKey)
-      await emptyChannelWithChallenge(init, charlie.address).should.be.rejectedWith('tokens must be conserved')
-    })
-
-    it("FAIL: token conservation", async() => {
-      init.txCount = [2,1]
-      init.user = charlie.address
-      init.tokenBalances = [0,1]
-      init.sigHub = await updateHash(init, hub.privateKey)
-      init.sigUser = await updateHash(init, charlie.privateKey)
-      await emptyChannelWithChallenge(init, charlie.address).should.be.rejectedWith('tokens must be conserved')
-    })
-
-    it("FAIL: token conservation", async() => {
+    it("FAIL: tokens conservation", async() => {
       init.txCount = [2,1]
       init.user = charlie.address
       init.tokenBalances = [0,1]
@@ -862,10 +899,11 @@ contract("ChannelManager::emptyChannel", accounts => {
   })
 });
 
-/*
-// TODO
+
+
+
 contract("ChannelManager::startExitThread", accounts => {
-  let hub, alice, bob, init
+  let hub, alice, bob, chad, dan, elon, fred, greg, hank, init
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
     hub = {
@@ -880,9 +918,33 @@ contract("ChannelManager::startExitThread", accounts => {
       address: accounts[2],
       privateKey: privKeys[2]
     }
+    chad = {
+      address: accounts[3],
+      privateKey: privKeys[3]
+    }
+    dan = {
+      address: accounts[4],
+      privateKey: privKeys[4]
+    }
+    elon = {
+      address: accounts[5],
+      privateKey: privKeys[5]
+    }
+    fred = {
+      address: accounts[6],
+      privateKey: privKeys[6]
+    }
+    greg = {
+      address: accounts[7],
+      privateKey: privKeys[7]
+    }
+    hank = {
+      address: accounts[8],
+      privateKey: privKeys[8]
+    }
     init = {
-      "user" : hub.address,
-      "sender" : alice.address,
+      "user" : alice.address,
+      "sender" : hub.address,
       "receiver" : bob.address,
       "weiBalances" : [0, 0],
       "tokenBalances" : [0, 0],
@@ -893,63 +955,168 @@ contract("ChannelManager::startExitThread", accounts => {
   })  
 
   describe('startExitThread', () => {
-    it("happy case", async() => {
-
-      const hash = await web3.utils.soliditySha3(
-        channelManager.address,
-        {type: 'address', value: init.user},
-        {type: 'address', value: init.sender},
-        {type: 'address', value: init.receiver},
-        {type: 'uint256[2]', value: init.weiBalances},
-        {type: 'uint256[2]', value: init.tokenBalances},
-        {type: 'uint256[2]', value: init.txCount}
-      )
-      const sig = await web3.eth.accounts.sign(hash, privKeys[1])
-  
-      init.sig = sig.signature
-
-      await hubDeposit(alice.address, alice.privateKey, bob.address, 1)
-
-      await channelManager.startExit(
-        accounts[1]
-      )
-
+    it("FAIL : not in thread dispute phase", async() => {
+      init.sig = await updateThreadHash(init, alice.privateKey)
+      await startExitThread(init, hub.address).should.be.rejectedWith('channel must be in thread dispute phase')
+    })
+    it("FAIL : channel closing time has not passed", async() => {
+      await hubDeposit(alice.address, alice.privateKey, bob.address, 2)
+      await channelManager.startExit(alice.address)
+      await moveForwardSecs(config.timeout + 1) 
+      await channelManager.emptyChannel(alice.address)
+      await moveForwardSecs(config.timeout + 1) 
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, hub.address).should.be.rejectedWith('channel thread closing time must not have passed')
+    })
+    it("FAIL: initiator is not user or hub", async() => {
+      init.user = bob.address
+      init.receiver = chad.address
+      await hubDeposit(bob.address, bob.privateKey, chad.address, 2)
+      await channelManager.startExit(bob.address)
       await moveForwardSecs(config.timeout + 1)
-
-      await channelManager.emptyChannel(
-        accounts[1]
-      )
-
-      await channelManager.startExitThread(
-        init.user,
-        init.sender,
-        init.receiver,
-        init.weiBalances,
-        init.tokenBalances,
-        init.txCount,
-        init.proof,
-        init.sig
-      )
+      await channelManager.emptyChannel(bob.address)
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, alice.address).should.be.rejectedWith('thread exit initiator must be user or hub')
+    })
+    it("FAIL: already in dispute", async() => {
+      init.user = chad.address
+      init.receiver = alice.address
+      await hubDeposit(chad.address, chad.privateKey, alice.address, 2)
+      await channelManager.startExit(chad.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(chad.address)
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, hub.address)
+      await startExitThread(init, hub.address).should.be.rejectedWith('thread must not already be in dispute')
+    })
+    it("FAIL: txCount not higher", async() => {
+      init.user = elon.address
+      init.receiver = chad.address
+      await hubDeposit(elon.address, elon.privateKey, chad.address, 2)
+      await channelManager.startExit(elon.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(elon.address)
+      init.txCount = 1
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, hub.address)
+    })
+    it("FAIL: _verifyThread - sender is receiver", async() => {
+      init.user = init.receiver = fred.address
+      await hubDeposit(fred.address, fred.privateKey, fred.address, 2)
+      await channelManager.startExit(fred.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(fred.address)
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, hub.address)
+    })
+    it("FAIL: _verifyThread - signature does not match", async() => {
+      init.user = dan.address
+      init.receiver = chad.address
+      await hubDeposit(dan.address, dan.privateKey, chad.address, 2)
+      await channelManager.startExit(dan.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(dan.address)
+      init.sig = await updateThreadHash(init, alice.privateKey)
+      await startExitThread(init, hub.address).should.be.rejectedWith('revert')
+    })
+    it("FAIL: not in threadRoot", async() => {
+      init.user = hank.address
+      init.receiver = alice.address
+      init.threadRoot = "0x000000000000000000000000000000000000000000000000000000000000001"
+      await hubDeposit(hank.address, hank.privateKey, alice.address, 2)
+      await channelManager.startExit(hank.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(hank.address)
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, hub.address)
+    })
+    it("happy case", async() => {
+      init.user = greg.address
+      init.receiver = chad.address
+      await hubDeposit(greg.address, greg.privateKey, chad.address, 2)
+      await channelManager.startExit(greg.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(greg.address)
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThread(init, hub.address)
     })
   })
 });
 
 
+/*
 // TODO
 contract("ChannelManager::startExitThreadWithUpdate", accounts => {
+  let hub, alice, bob, chad, dan, elon, fred, greg, hank, init
   before('deploy contracts', async () => {
     channelManager = await Ledger.deployed()
+    hub = {
+      address: accounts[0],
+      privateKey: privKeys[0]
+    }
+    alice = {
+      address: accounts[1],
+      privateKey: privKeys[1]
+    }
+    bob = {
+      address: accounts[2],
+      privateKey: privKeys[2]
+    }
+    chad = {
+      address: accounts[3],
+      privateKey: privKeys[3]
+    }
+    dan = {
+      address: accounts[4],
+      privateKey: privKeys[4]
+    }
+    elon = {
+      address: accounts[5],
+      privateKey: privKeys[5]
+    }
+    fred = {
+      address: accounts[6],
+      privateKey: privKeys[6]
+    }
+    greg = {
+      address: accounts[7],
+      privateKey: privKeys[7]
+    }
+    hank = {
+      address: accounts[8],
+      privateKey: privKeys[8]
+    }
+    init = {
+      "user" : alice.address,
+      "sender" : hub.address,
+      "receiver" : bob.address,
+      "weiBalances" : [1, 0],
+      "tokenBalances" : [1, 0],
+      "txCount" : 2,
+      "proof" : emptyRootHash,
+      "updatedWeiBalances" : [0,1],
+      "updatedTokenBalances" : [0,1],
+      "updatedTxCount" : 3,
+    }
+    
   })  
 
   describe('startExitThreadWithUpdate', () => {
     it("happy case", async() => {
-      await channelManager.startExitThreadWithUpdate(
-        accounts[0]
-      )
+      init.user = alice.address
+      init.receiver = bob.address
+      await hubDeposit(alice.address, alice.privateKey, bob.address, init.txCount, init.weiBalances, init.tokenBalances)
+      await channelManager.startExit(alice.address)
+      await moveForwardSecs(config.timeout + 1)
+      await channelManager.emptyChannel(alice.address)
+      init.sig = await updateThreadHash(init, hub.privateKey)
+      await startExitThreadWithUpdate(init, hub.address)
     })
   })
 });
+*/
 
+/*
 // TODO
 contract("ChannelManager::fastEmptyThread", accounts => {
   before('deploy contracts', async () => {
@@ -994,5 +1161,4 @@ contract("ChannelManager::nukeThreads", accounts => {
     })
   })
 });
-
 */
