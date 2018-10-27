@@ -1072,4 +1072,6 @@ contract ChannelManager {
 
         return cursor == _root;
     }
+
+    function() external payable {}
 }
