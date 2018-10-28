@@ -68,6 +68,17 @@ async function generateThreadRootHash(threadInitStates){
   return await Connext.Utils.generateThreadRootHash([threadInitStates])
 }
 
+function getEventParams(tx, event) {
+  if (tx.logs.length > 0) {
+    for (let idx=0; idx < tx.logs.length; idx++) {
+      if (tx.logs[idx].event == event) {
+        return tx.logs[idx].args
+      }
+    }
+  }
+  return false
+}
+
 async function updateHash(data, privateKey) {
   const hash = await web3.utils.soliditySha3(
     channelManager.address,
@@ -180,6 +191,14 @@ async function startExitThread(data, user) {
   )
 }
 
+async function emptyThread(data) {
+    await channelManager.emptyThread(
+        data.user,
+        data.sender,
+        data.receiver
+    )
+}
+
 // NOTE : ganache-cli -m 'refuse result toy bunker royal small story exhaust know piano base stand'
 
 // NOTE : hub : accounts[0], privKeys[0]
@@ -241,6 +260,65 @@ contract("ChannelManager", accounts => {
         await restore(snapshotId)
     })
 
+    describe.only('emptyThread', () => {
+        it("happy case", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address) 
+            await moveForwardSecs(config.timeout + 1)    
+            await emptyThread(init)
+        })
+
+        it("FAIL: channel not in thread dispute", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address) 
+            await moveForwardSecs(config.timeout + 1)    
+            await emptyThread(init)
+            await emptyThread(init).should.be.rejectedWith('channel must be in thread dispute')
+        })
+
+        it("FAIL: thread closing time not passed", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address)    
+            await emptyThread(init).should.be.rejectedWith('thread closing time must have passed')
+        })
+
+        it("FAIL: thread not in dispute", async() => {            
+            init.threadCount = 2
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address) 
+            await moveForwardSecs(config.timeout + 1)    
+            await emptyThread(init)
+            await emptyThread(init).should.be.rejectedWith('thread must be in dispute')
+        })
+    })
+
     describe('startExitThread', () => {
         it("happy case", async() => {
             init.threadCount = 1
@@ -254,7 +332,7 @@ contract("ChannelManager", accounts => {
             await startExitThread(init, viewer.address) 
         })
 
-        it("FAIL: no in thread dispute", async() => {
+        it("FAIL: not in thread dispute", async() => {
             init.threadCount = 1
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init)
@@ -326,7 +404,7 @@ contract("ChannelManager", accounts => {
             await channelManager.emptyChannel(viewer.address)
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            await startExitThread(init, viewer.address).should.be.rejectedWith('initial thread state is not contained in threadRoot')
+            await startExitThread(init, viewer.address).should.be.rejectedWith('_verifyThread - initial thread state is not contained in threadRoot')
         })
     })
 
