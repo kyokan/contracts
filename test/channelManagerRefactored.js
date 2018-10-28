@@ -58,6 +58,16 @@ async function moveForwardSecs(secs) {
   return true
 }
 
+
+
+async function generateThreadProof(threadHashToProve, threadInitStates) {
+  return await Connext.Utils.generateThreadProof(threadHashToProve, threadInitStates)
+}
+
+async function generateThreadRootHash(threadInitStates){
+  return await Connext.Utils.generateThreadRootHash([threadInitStates])
+}
+
 async function updateHash(data, privateKey) {
   const hash = await web3.utils.soliditySha3(
     channelManager.address,
@@ -70,6 +80,20 @@ async function updateHash(data, privateKey) {
     {type: 'bytes32', value: data.threadRoot},
     data.threadCount,
     data.timeout
+  )
+  const sig = await web3.eth.accounts.sign(hash, privateKey)
+  return sig.signature
+}
+
+async function updateThreadHash(data, privateKey) {
+  const hash = await web3.utils.soliditySha3(
+    channelManager.address,
+    {type: 'address', value: data.user},
+    {type: 'address', value: data.sender},
+    {type: 'address', value: data.receiver},
+    {type: 'uint256[2]', value: data.weiBalances},
+    {type: 'uint256[2]', value: data.tokenBalances},
+    {type: 'uint256', value: data.txCount}
   )
   const sig = await web3.eth.accounts.sign(hash, privateKey)
   return sig.signature
@@ -142,6 +166,20 @@ async function startExitWithUpdate(data, user) {
   ) 
 }
 
+async function startExitThread(data, user) {
+  await channelManager.startExitThread(
+    data.user,
+    data.sender,
+    data.receiver,
+    data.weiBalances,
+    data.tokenBalances,
+    data.txCount,
+    data.proof,
+    data.sig,
+    {from: user}
+  )
+}
+
 // NOTE : ganache-cli -m 'refuse result toy bunker royal small story exhaust know piano base stand'
 
 // NOTE : hub : accounts[0], privKeys[0]
@@ -175,6 +213,8 @@ contract("ChannelManager", accounts => {
         init = {
             "hub": hub.address,
             "user" : viewer.address,
+            "sender" : viewer.address,
+            "receiver" : performer.address,
             "recipient" : performer.address,
             "weiBalances" : [0, 0],
             "tokenBalances" : [0, 0],
@@ -183,13 +223,164 @@ contract("ChannelManager", accounts => {
             "txCount" : [1,1],
             "threadRoot" : emptyRootHash,
             "threadCount" : 0,
-            "timeout" : 0
+            "timeout" : 0,
+            "proof" : await generateThreadRootHash({
+                "contractAddress" : channelManager.address,
+                "user" : viewer.address,
+                "sender" : hub.address,
+                "receiver" : performer.address,
+                "balanceWeiSender" : 0,
+                "balanceWeiReceiver" : 0,
+                "balanceTokenSender" : 0,
+                "balanceTokenReceiver" : 0,
+                "txCount" : 2
+            })
         }
     })
     afterEach(async () => {
         await restore(snapshotId)
     })
 
+    describe('startExitThread', () => {
+        it("happy case", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address) 
+        })
+
+        it("FAIL: no in thread dispute", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address).should.be.rejectedWith('channel must be in thread dispute phase')
+        })       
+
+        it("FAIL: exit initiator not user or hub", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, performer.address).should.be.rejectedWith('thread exit initiator must be user or hub')
+        })  
+
+        it("FAIL: thread not already in dispute", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address) 
+            await startExitThread(init, viewer.address).should.be.rejectedWith('thread must not already be in dispute')
+        })
+
+        it("FAIL: txCount not higher", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 0
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address).should.be.rejectedWith('thread txCount must be higher than the current thread txCount')
+        }) 
+
+        it("FAIL: _verifyThread - sender can not be receiver", async() => {
+            init.threadCount = 1
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sender = viewer.address
+            init.receiver = viewer.address
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address).should.be.rejectedWith('sender can not be receiver')
+        }) 
+        
+        it("thread not contained in threadRoot", async() => {
+            init.threadCount = 1
+            init.threadRoot = "0x0000000000000000000000000000000000000000000000000000000000000001"
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await hubAuthorizedUpdate(init)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            await channelManager.emptyChannel(viewer.address)
+            init.txCount = 2
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, viewer.address).should.be.rejectedWith('initial thread state is not contained in threadRoot')
+        })
+    })
+
+    describe('nukeThreads', () => {
+        it("happy case", async() => {
+            const weiDeposit = 100
+            init.pendingWeiUpdates = [0,0,weiDeposit,0]
+            init.tokenBalances = [0,0]
+            init.threadCount = 1
+            init.sigHub = await updateHash(init, hub.privateKey)
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await userAuthorizedUpdate(init, viewer, weiDeposit)
+            
+            await channelManager.startExit(viewer.address)
+            
+            init.txCount = [2,1]
+            init.sigHub = await updateHash(init, hub.privateKey)
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await emptyChannelWithChallenge(init, viewer.address) 
+            await moveForwardSecs(config.timeout * 11)    
+            await channelManager.nukeThreads(viewer.address)
+        })
+        
+        it("FAIL : channel not in thread dispute ", async() => {
+            const weiDeposit = 100
+            init.pendingWeiUpdates = [0,0,weiDeposit,0]
+            init.tokenBalances = [0,0]
+            init.threadCount = 1
+            init.sigHub = await updateHash(init, hub.privateKey)
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await userAuthorizedUpdate(init, viewer, weiDeposit)
+            
+            await channelManager.startExit(viewer.address)
+            await channelManager.nukeThreads(viewer.address).should.be.rejectedWith('channel must be in thread dispute')
+        })
+
+        it("FAIL : channel not passed 10x challenge periods", async() => {
+            const weiDeposit = 100
+            init.pendingWeiUpdates = [0,0,weiDeposit,0]
+            init.tokenBalances = [0,0]
+            init.threadCount = 1
+            init.sigHub = await updateHash(init, hub.privateKey)
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await userAuthorizedUpdate(init, viewer, weiDeposit)
+            
+            await channelManager.startExit(viewer.address)
+            
+            init.txCount = [2,1]
+            init.sigHub = await updateHash(init, hub.privateKey)
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            await emptyChannelWithChallenge(init, viewer.address) 
+            await channelManager.nukeThreads(viewer.address).should.be.rejectedWith('thread closing time must have passed by 10 challenge periods')
+        })
+    })
 
    describe('emptyChannelWithChallenge', () => {
     it("happy case", async() => {
