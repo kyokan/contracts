@@ -260,7 +260,7 @@ contract("ChannelManager", accounts => {
         await restore(snapshotId)
     })
 
-    describe.only('emptyThread', () => {
+    describe('emptyThread', () => {
         it("happy case", async() => {
             init.threadCount = 1
             init.sigUser = await updateHash(init, viewer.privateKey)
