@@ -34,13 +34,13 @@ async function snapshot() {
 
 async function restore(snapshotId) {
   return new Promise((accept, reject) => {
-   ethRPC.sendAsync({method: `evm_revert`, params: [snapshotId]}, (err, result) => {
-    if (err) {
-     reject(err)
-    } else {
-     accept(result)
-    }
-   })
+    ethRPC.sendAsync({method: `evm_revert`, params: [snapshotId]}, (err, result) => {
+      if (err) {
+        reject(err)
+      } else {
+        accept(result)
+      }
+    })
   })
 }
 
@@ -58,11 +58,11 @@ async function moveForwardSecs(secs) {
 }
 
 async function generateThreadProof(threadHashToProve, threadInitStates) {
- return await Connext.Utils.generateThreadProof(threadHashToProve, threadInitStates)
+  return await Connext.Utils.generateThreadProof(threadHashToProve, threadInitStates)
 }
 
 async function generateThreadRootHash(threadInitStates){
- return await Connext.Utils.generateThreadRootHash([threadInitStates])
+  return await Connext.Utils.generateThreadRootHash([threadInitStates])
 }
 
 function getEventParams(tx, event) {
