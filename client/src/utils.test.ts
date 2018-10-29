@@ -9,6 +9,8 @@ import { Utils } from './Utils'
 import { MerkleUtils } from './helpers/merkleUtils'
 // import { MerkleTree } from './helpers/merkleTree'
 import MerkleTree from './helpers/merkleTree'
+import * as t from './testing'
+import { assert } from './testing'
 
 describe('Utils', () => {
   let web3: any
@@ -23,28 +25,9 @@ describe('Utils', () => {
 
   it('should recover the signer from the channel update when there are no threads', async () => {
     // create and sign channel state update
-    const channelStateFingerprint: ChannelStateFingerprint = {
-      contractAddress: partyA, // doesnt validate
-      user: partyA,
-      recipient: partyA,
-      balanceWeiHub: '10',
-      balanceWeiUser: '10',
-      balanceTokenHub: '10',
-      balanceTokenUser: '10',
-      pendingDepositWeiHub: '0',
-      pendingDepositWeiUser: '0',
-      pendingDepositTokenHub: '0',
-      pendingDepositTokenUser: '0',
-      pendingWithdrawalWeiHub: '0',
-      pendingWithdrawalWeiUser: '0',
-      pendingWithdrawalTokenHub: '0',
-      pendingWithdrawalTokenUser: '0',
-      txCountGlobal: 1,
-      txCountChain: 1,
-      threadRoot: Utils.emptyRootHash,
-      threadCount: 0,
-      timeout: 0,
-    }
+    const channelStateFingerprint = t.getChannelState('full', {
+      balanceWei: [100, 200],
+    }) as ChannelStateFingerprint
     // generate hash
     const hash = Utils.createChannelStateUpdateHash(channelStateFingerprint)
     // sign
@@ -60,17 +43,9 @@ describe('Utils', () => {
 
   it('should recover the signer from the thread state update', async () => {
     // create and sign channel state update
-    const threadStateFingerprint: ThreadStateFingerprint = {
-      contractAddress: partyA, // doesnt validate
-      user: partyA,
-      sender: partyA,
-      receiver: partyA,
-      balanceWeiSender: '10',
-      balanceWeiReceiver: '10',
-      balanceTokenReceiver: '10',
-      balanceTokenSender: '10',
-      txCount: 1,
-    }
+    const threadStateFingerprint = t.getThreadState('full', {
+      balanceWei: [100, 200],
+    })
     // generate hash
     const hash = Utils.createThreadStateUpdateHash(threadStateFingerprint)
     // sign
@@ -85,17 +60,9 @@ describe('Utils', () => {
   })
 
   it('should return the correct root hash', async () => {
-    const threadStateFingerprint: ThreadStateFingerprint = {
-      contractAddress: partyA, // doesnt validate
-      user: partyA,
-      sender: partyA,
-      receiver: partyA,
-      balanceWeiSender: '10',
-      balanceWeiReceiver: '10',
-      balanceTokenReceiver: '10',
-      balanceTokenSender: '10',
-      txCount: 1,
-    }
+    const threadStateFingerprint = t.getThreadState('empty', {
+      balanceWei: [100, 0],
+    })
     // TO DO: merkle tree class imports not working...?
     // generate hash
     const hash = Utils.createThreadStateUpdateHash(threadStateFingerprint)

@@ -254,7 +254,7 @@ export function channelStateToPendingBalances(
  ******* TYPE CONVERSIONS ********
  *********************************/
 // util to convert from string to bn for all types
-const channelFieldsToConvert = [
+export const channelNumericFields = [
   'balanceWeiUser',
   'balanceWeiHub',
   'balanceTokenUser',
@@ -269,63 +269,63 @@ const channelFieldsToConvert = [
   'pendingWithdrawalTokenHub',
 ]
 
-const threadFieldsToConvert = [
+export const threadNumericFields = [
   'balanceWeiSender',
   'balanceWeiReceiver',
   'balanceTokenSender',
   'balanceTokenReceiver',
 ]
 
-const balanceFieldsToConvert = ['balanceWei', 'balanceToken']
+export const balanceNumericFields = ['balanceWei', 'balanceToken']
 
 export function channelStateToBN(
   channelState: ChannelStateFingerprint,
 ): ChannelStateFingerprintBN {
-  return stringToBN(channelFieldsToConvert, channelState)
+  return stringToBN(channelNumericFields, channelState)
 }
 
 export function channelStateToString(
   channelState: ChannelStateFingerprintBN,
 ): ChannelStateFingerprint {
-  return BNtoString(channelFieldsToConvert, channelState)
+  return BNtoString(channelNumericFields, channelState)
 }
 
 export function signedChannelStateToBN(
   channelState: SignedChannelState,
 ): SignedChannelStateBN {
-  return stringToBN(channelFieldsToConvert, channelState)
+  return stringToBN(channelNumericFields, channelState)
 }
 
 export function signedChannelStateToString(
   channelState: SignedChannelStateBN,
 ): SignedChannelState {
-  return BNtoString(channelFieldsToConvert, channelState)
+  return BNtoString(channelNumericFields, channelState)
 }
 
 export function threadStateToBN(threadState: ThreadState): ThreadStateBN {
-  return stringToBN(threadFieldsToConvert, threadState)
+  return stringToBN(threadNumericFields, threadState)
 }
 
 export function threadStateToString(threadState: ThreadStateBN): ThreadState {
-  return BNtoString(threadFieldsToConvert, threadState)
+  return BNtoString(threadNumericFields, threadState)
 }
 
 export function balancesToBN(balances: Balances): BalancesBN {
-  return stringToBN(balanceFieldsToConvert, balances)
+  return stringToBN(balanceNumericFields, balances)
 }
 
 export function balancesToString(balances: BalancesBN): Balances {
-  return BNtoString(balanceFieldsToConvert, balances)
+  return BNtoString(balanceNumericFields, balances)
 }
 
 export function pendingBalancesToBN(
   pending: PendingBalances,
 ): PendingBalancesBN {
   return {
-    hubDeposit: stringToBN(balanceFieldsToConvert, pending.hubDeposit),
-    userDeposit: stringToBN(balanceFieldsToConvert, pending.userDeposit),
-    hubWithdrawal: stringToBN(balanceFieldsToConvert, pending.hubWithdrawal),
-    userWithdrawal: stringToBN(balanceFieldsToConvert, pending.userWithdrawal),
+    hubDeposit: stringToBN(balanceNumericFields, pending.hubDeposit),
+    userDeposit: stringToBN(balanceNumericFields, pending.userDeposit),
+    hubWithdrawal: stringToBN(balanceNumericFields, pending.hubWithdrawal),
+    userWithdrawal: stringToBN(balanceNumericFields, pending.userWithdrawal),
   }
 }
 
@@ -333,10 +333,10 @@ export function pendingBalancesToString(
   pending: PendingBalancesBN,
 ): PendingBalances {
   return {
-    hubDeposit: BNtoString(balanceFieldsToConvert, pending.hubDeposit),
-    userDeposit: BNtoString(balanceFieldsToConvert, pending.userDeposit),
-    hubWithdrawal: BNtoString(balanceFieldsToConvert, pending.hubWithdrawal),
-    userWithdrawal: BNtoString(balanceFieldsToConvert, pending.userWithdrawal),
+    hubDeposit: BNtoString(balanceNumericFields, pending.hubDeposit),
+    userDeposit: BNtoString(balanceNumericFields, pending.userDeposit),
+    hubWithdrawal: BNtoString(balanceNumericFields, pending.hubWithdrawal),
+    userWithdrawal: BNtoString(balanceNumericFields, pending.userWithdrawal),
   }
 }
 

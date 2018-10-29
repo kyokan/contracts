@@ -2,6 +2,7 @@ import BN = require('bn.js')
 import Web3 = require('web3')
 // local imports
 import { ChannelManager } from './typechain/ChannelManager'
+const channelManagerAbi = require('./typechain/abi/ChannelManagerAbi')
 import { Networking } from './helpers/networking'
 import { ERC20 } from './typechain/ERC20'
 import { Utils } from './Utils'
@@ -45,26 +46,19 @@ export class Connext {
   tokenAddress?: Address
   tokenName?: string
 
-  token?: ERC20
-
   channelManager: ChannelManager
   constructor(opts: ConnextOptions) {
     this.web3 = new Web3(opts.web3.currentProvider) // convert legacy web3 0.x to 1.x
     this.hubAddress = opts.hubAddress.toLowerCase()
     this.hubUrl = opts.hubUrl
     // TO DO: how to include abis?
-    // this.channelManager = new this.web3.eth.Contract(
-    //   channelManagerAbi,
-    //   opts.contractAddress,
-    // ) as ChannelManager
-    // TO DO: contract must compile and deploy, doesnt atm
-    this.channelManager = null as any // TODO: fix
+    this.channelManager = new this.web3.eth.Contract(
+      channelManagerAbi,
+      opts.contractAddress,
+    ) as ChannelManager
     this.networking = new Networking(opts.hubUrl)
     this.tokenAddress = opts.tokenAddress
     this.tokenName = opts.tokenName
-    // this.token = opts.tokenAddress
-    //   ? (new this.web3.eth.Contract(tokenAbi, opts.tokenAddress) as ERC20)
-    //   : null
   }
 
   static utils = new Utils()
@@ -72,18 +66,33 @@ export class Connext {
   // validation lives here may be private in future
   static validation = new Validation()
 
-  // do we actually need this?
-  // contractHandlers: ContractHandlers // maybe we dont want to publicly expose
-  // will be handled in the top-level wrappers
-  // top level-wrappers represent wallet actions
-
   /*********************************
    *********** FLOW FNS ************
    *********************************/
   // these are functions that are called within the flow of certain operations
 
-  // signs all updates retrieved from 'sync' method
-  // TO DO: - must return signed hub responses
+  // signs + submits all updates retrieved from 'sync' method
+  // verifies cosigns and submits to hub all in one call
+  verifyAndCosignAndSubmit = async (
+    latestUpdate: ChannelStateUpdate,
+    actionItems: ChannelStateUpdate[],
+    user?: Address,
+  ) => {
+    // default user is accounts[0]
+    user = user || (await this.getDefaultUser())
+    const signedStateUpdates = await this.verifyAndCosign(
+      latestUpdate,
+      actionItems,
+      user,
+    )
+    return await this.updateHub(
+      latestUpdate.state.txCountGlobal,
+      signedStateUpdates,
+      user,
+    )
+  }
+
+  // only returns the signed states to allow wallet to decide when and how they get submitted
   verifyAndCosign = async (
     latestUpdate: ChannelStateUpdate,
     actionItems: ChannelStateUpdate[],
@@ -93,6 +102,11 @@ export class Connext {
     // default user is accounts[0]
     user = user || (await this.getDefaultUser())
     // verify and sign each item since pending deposit
+
+    // wc: I am only passing in one update at a time so this will work.
+    // however if I did pass in more than 1 update there is a problem with promise.alling here and it won't work
+    // this is because if we pass in more than 1 update each update has the previous nonce as previous update not the nonce teh whole array started at
+
     const promises = actionItems.map(async (item, index) => {
       if (index + 1 === actionItems.length) {
         // at end of array
@@ -113,13 +127,8 @@ export class Connext {
       }
     })
     const signedStateUpdates = await Promise.all(promises)
-    // post to hub
-    // get synced nonce
-    return await this.updateHub(
-      latestUpdate.state.txCountGlobal,
-      signedStateUpdates,
-      user,
-    )
+
+    return signedStateUpdates
   }
 
   // user actions
@@ -170,7 +179,7 @@ export class Connext {
       previous: prevChannel.state,
       current: hubWithdrawalResponse.state,
       pending,
-    } as ChannelFlexibleValidatorOptions
+    }
     const signedUpdate = await this.createChannelStateUpdate(opts)
 
     // calculate total money in channel, including bonded in threads

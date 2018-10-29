@@ -249,7 +249,7 @@ contract ChannelManager {
         uint256 timeout,
         string sigHub
     ) public payable noReentrancy {
-        require(msg.value == pendingWeiUpdates[2], "userAuthorizedUpdate: msg.value is not equal to pending user deposit");
+        require(msg.value == pendingWeiUpdates[2], "msg.value is not equal to pending user deposit");
 
         Channel storage channel = channels[msg.sender];
 
@@ -629,10 +629,10 @@ contract ChannelManager {
         require(updatedTokenBalances[0].add(updatedTokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
         require(updatedWeiBalances[1] > weiBalances[1], "receiver wei balance must always increase");
-        require(updatedTokenBalances[1] > tokenBalances[1], "receiver token balance must always increase");
+        //require(updatedTokenBalances[1] > tokenBalances[1], "receiver token balance must always increase");
 
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
-        _verifyThread(user, threadMembers[0], threadMembers[1], updatedWeiBalances, updatedTokenBalances, updatedTxCount, "", sig, bytes32(0x0));
+        _verifyThread(user, threadMembers[0], threadMembers[1], updatedWeiBalances, updatedTokenBalances, updatedTxCount, "", updateSig, bytes32(0x0));
 
         thread.weiBalances = updatedWeiBalances;
         thread.tokenBalances = updatedTokenBalances;
