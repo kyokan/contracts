@@ -13,7 +13,7 @@
     "generate": "typechain --target=web3-1.0.0 --outDir ./build/ts/ './build/contracts/*.json'",
     "migrate": "truffle migrate",
     "prepare": "npm run build",
-    "test": "truffle test test/channelManager.js --network=ganache"
+    "test": "truffle test test/channelManagerRefactored.js --network=ganache"
   },
   "repository": {
     "type": "git",
