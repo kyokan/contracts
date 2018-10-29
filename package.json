@@ -13,12 +13,7 @@
     "generate": "typechain --target=web3-1.0.0 --outDir ./build/ts/ './build/contracts/*.json'",
     "migrate": "truffle migrate",
     "prepare": "npm run build",
-<<<<<<< Updated upstream
     "test": "truffle test test/channelManagerRefactored.js --network=ganache"
-=======
-    "test": "truffle test test/channelManager.js --network=ganache",
-    "t": "truffle test test/channelManagerRefactored.js --network=ganache"
->>>>>>> Stashed changes
   },
   "repository": {
     "type": "git",
