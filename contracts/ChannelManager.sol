@@ -632,7 +632,7 @@ contract ChannelManager {
         require(updatedTokenBalances[1] > tokenBalances[1], "receiver token balance must always increase");
 
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
-        _verifyThread(user, threadMembers[0], threadMembers[1], updatedWeiBalances, updatedTokenBalances, updatedTxCount, "", sig, bytes32(0x0));
+        _verifyThread(user, threadMembers[0], threadMembers[1], updatedWeiBalances, updatedTokenBalances, updatedTxCount, "", updateSig, bytes32(0x0));
 
         thread.weiBalances = updatedWeiBalances;
         thread.tokenBalances = updatedTokenBalances;
