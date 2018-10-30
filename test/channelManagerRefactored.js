@@ -5,7 +5,7 @@ const ethRPC = new EthRPC(new HttpProvider('http://localhost:8545'))
 const Utils = require("./helpers/utils");
 const Ledger = artifacts.require("./ChannelManager.sol");
 const EC = artifacts.require("./ECTools.sol");
-const Token = artifacts.require("./lib/StandardToken.sol");
+const Token = artifacts.require("./lib/HumanStandardToken.sol");
 const Connext = require("../client/dist/Utils.js");
 const privKeys = require("./privKeys.json")
 
@@ -20,7 +20,7 @@ const SolRevert = "VM Exception while processing transaction: revert";
 
 const emptyRootHash =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
-  
+
 async function snapshot() {
     return new Promise((accept, reject) => {
         ethRPC.sendAsync({method: `evm_snapshot`}, (err, result)=> {
@@ -112,7 +112,7 @@ async function updateThreadHash(data, privateKey) {
 
 async function hubAuthorizedUpdate(data) {
   await channelManager.hubAuthorizedUpdate(
-    data.user, 
+    data.user,
     data.recipient,
     data.weiBalances,
     data.tokenBalances,
@@ -145,7 +145,7 @@ async function userAuthorizedUpdate(data, user, wei=0) {
 
 async function emptyChannelWithChallenge(data, user) {
   await channelManager.emptyChannelWithChallenge(
-    [data.user, data.recipient], 
+    [data.user, data.recipient],
     data.weiBalances,
     data.tokenBalances,
     data.pendingWeiUpdates,
@@ -155,14 +155,14 @@ async function emptyChannelWithChallenge(data, user) {
     data.threadCount,
     data.timeout,
     data.sigHub,
-    data.sigUser, 
+    data.sigUser,
     {from: user}
   )
 }
 
 async function startExitWithUpdate(data, user) {
   await channelManager.startExitWithUpdate(
-    [data.user, data.recipient], 
+    [data.user, data.recipient],
     data.weiBalances,
     data.tokenBalances,
     data.pendingWeiUpdates,
@@ -174,7 +174,7 @@ async function startExitWithUpdate(data, user) {
     data.sigHub,
     data.sigUser,
     {from:user}
-  ) 
+  )
 }
 
 async function startExitThread(data, user) {
@@ -237,7 +237,7 @@ let hub, performer, viewer, init
 
 contract("ChannelManager", accounts => {
     let snapshotId
-    
+
     before('deploy contracts', async () => {
         channelManager = await Ledger.deployed()
         tokenAddress = await Token.deployed()
@@ -316,9 +316,10 @@ contract("ChannelManager", accounts => {
             init.txCount = 3
 
             // TODO : increase tokens
+            tokenAddress.approve(hub.address, 100, {from: viewer.address})
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [90,10]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 4
@@ -330,7 +331,7 @@ contract("ChannelManager", accounts => {
                 tokenBalances: [0,0],
                 txCount: 4
             }, viewer.privateKey)
-            await startExitThreadWithUpdate(init, viewer.address) 
+            await startExitThreadWithUpdate(init, viewer.address)
         })
 
         it("FAIL: channel not in thread dispute phase", async() => {
@@ -361,7 +362,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [90,10]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 3
@@ -404,7 +405,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [90,10]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 4
@@ -447,7 +448,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [90,10]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 4
@@ -490,7 +491,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [90,10]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 4
@@ -502,7 +503,7 @@ contract("ChannelManager", accounts => {
                 tokenBalances: [0,0],
                 txCount: 4
             }, viewer.privateKey)
-            await startExitThreadWithUpdate(init, viewer.address) 
+            await startExitThreadWithUpdate(init, viewer.address)
             await startExitThreadWithUpdate(init, viewer.address).should.be.rejectedWith("thread must not already be in dispute")
         })
 
@@ -534,7 +535,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [90,10]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 0
@@ -577,7 +578,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [90,10]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 4
@@ -620,7 +621,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [0,0]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 4
@@ -663,7 +664,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [90,10]
             init.updatedTokenBalances = [100,100]
             init.updatedTxCount = 4
@@ -706,7 +707,7 @@ contract("ChannelManager", accounts => {
             // TODO : increase tokens
             init.weiBalances = [100,0]
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            
+
             init.updatedWeiBalances = [100,0]
             init.updatedTokenBalances = [0,0]
             init.updatedTxCount = 4
@@ -724,7 +725,10 @@ contract("ChannelManager", accounts => {
 
     describe('emptyThread', () => {
         it("happy case", async() => {
+            await tokenAddress.transfer(channelManager.address, 100)
+            await tokenAddress.approve(hub.address, 100)
             init.threadCount = 1
+            init.pendingTokenUpdates = [100,0,0,0]
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init)
             await channelManager.startExit(viewer.address)
@@ -732,8 +736,8 @@ contract("ChannelManager", accounts => {
             await channelManager.emptyChannel(viewer.address)
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            await startExitThread(init, viewer.address) 
-            await moveForwardSecs(config.timeout + 1)    
+            await startExitThread(init, viewer.address)
+            await moveForwardSecs(config.timeout + 1)
             await emptyThread(init)
         })
 
@@ -746,8 +750,8 @@ contract("ChannelManager", accounts => {
             await channelManager.emptyChannel(viewer.address)
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            await startExitThread(init, viewer.address) 
-            await moveForwardSecs(config.timeout + 1)    
+            await startExitThread(init, viewer.address)
+            await moveForwardSecs(config.timeout + 1)
             await emptyThread(init)
             await emptyThread(init).should.be.rejectedWith('channel must be in thread dispute')
         })
@@ -761,11 +765,11 @@ contract("ChannelManager", accounts => {
             await channelManager.emptyChannel(viewer.address)
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            await startExitThread(init, viewer.address)    
+            await startExitThread(init, viewer.address)
             await emptyThread(init).should.be.rejectedWith('thread closing time must have passed')
         })
 
-        it("FAIL: thread not in dispute", async() => {            
+        it("FAIL: thread not in dispute", async() => {
             init.threadCount = 2
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init)
@@ -774,8 +778,8 @@ contract("ChannelManager", accounts => {
             await channelManager.emptyChannel(viewer.address)
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            await startExitThread(init, viewer.address) 
-            await moveForwardSecs(config.timeout + 1)    
+            await startExitThread(init, viewer.address)
+            await moveForwardSecs(config.timeout + 1)
             await emptyThread(init)
             await emptyThread(init).should.be.rejectedWith('thread must be in dispute')
         })
@@ -791,7 +795,7 @@ contract("ChannelManager", accounts => {
             await channelManager.emptyChannel(viewer.address)
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            await startExitThread(init, viewer.address) 
+            await startExitThread(init, viewer.address)
         })
 
         it("FAIL: not in thread dispute", async() => {
@@ -803,7 +807,7 @@ contract("ChannelManager", accounts => {
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
             await startExitThread(init, viewer.address).should.be.rejectedWith('channel must be in thread dispute phase')
-        })       
+        })
 
         it("FAIL: exit initiator not user or hub", async() => {
             init.threadCount = 1
@@ -815,7 +819,7 @@ contract("ChannelManager", accounts => {
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
             await startExitThread(init, performer.address).should.be.rejectedWith('thread exit initiator must be user or hub')
-        })  
+        })
 
         it("FAIL: thread not already in dispute", async() => {
             init.threadCount = 1
@@ -826,7 +830,7 @@ contract("ChannelManager", accounts => {
             await channelManager.emptyChannel(viewer.address)
             init.txCount = 2
             init.sig = await updateThreadHash(init, viewer.privateKey)
-            await startExitThread(init, viewer.address) 
+            await startExitThread(init, viewer.address)
             await startExitThread(init, viewer.address).should.be.rejectedWith('thread must not already be in dispute')
         })
 
@@ -840,7 +844,7 @@ contract("ChannelManager", accounts => {
             init.txCount = 0
             init.sig = await updateThreadHash(init, viewer.privateKey)
             await startExitThread(init, viewer.address).should.be.rejectedWith('thread txCount must be higher than the current thread txCount')
-        }) 
+        })
 
         it("FAIL: _verifyThread - sender can not be receiver", async() => {
             init.threadCount = 1
@@ -854,8 +858,8 @@ contract("ChannelManager", accounts => {
             init.receiver = viewer.address
             init.sig = await updateThreadHash(init, viewer.privateKey)
             await startExitThread(init, viewer.address).should.be.rejectedWith('sender can not be receiver')
-        }) 
-        
+        })
+
         it("thread not contained in threadRoot", async() => {
             init.threadCount = 1
             init.threadRoot = "0x0000000000000000000000000000000000000000000000000000000000000001"
@@ -879,17 +883,17 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             init.sigUser = await updateHash(init, viewer.privateKey)
             await userAuthorizedUpdate(init, viewer, weiDeposit)
-            
+
             await channelManager.startExit(viewer.address)
-            
+
             init.txCount = [2,1]
             init.sigHub = await updateHash(init, hub.privateKey)
             init.sigUser = await updateHash(init, viewer.privateKey)
-            await emptyChannelWithChallenge(init, viewer.address) 
-            await moveForwardSecs(config.timeout * 11)    
+            await emptyChannelWithChallenge(init, viewer.address)
+            await moveForwardSecs(config.timeout * 11)
             await channelManager.nukeThreads(viewer.address)
         })
-        
+
         it("FAIL : channel not in thread dispute ", async() => {
             const weiDeposit = 100
             init.pendingWeiUpdates = [0,0,weiDeposit,0]
@@ -898,7 +902,7 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             init.sigUser = await updateHash(init, viewer.privateKey)
             await userAuthorizedUpdate(init, viewer, weiDeposit)
-            
+
             await channelManager.startExit(viewer.address)
             await channelManager.nukeThreads(viewer.address).should.be.rejectedWith('channel must be in thread dispute')
         })
@@ -911,13 +915,13 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             init.sigUser = await updateHash(init, viewer.privateKey)
             await userAuthorizedUpdate(init, viewer, weiDeposit)
-            
+
             await channelManager.startExit(viewer.address)
-            
+
             init.txCount = [2,1]
             init.sigHub = await updateHash(init, hub.privateKey)
             init.sigUser = await updateHash(init, viewer.privateKey)
-            await emptyChannelWithChallenge(init, viewer.address) 
+            await emptyChannelWithChallenge(init, viewer.address)
             await channelManager.nukeThreads(viewer.address).should.be.rejectedWith('thread closing time must have passed by 10 challenge periods')
         })
     })
@@ -930,13 +934,13 @@ contract("ChannelManager", accounts => {
         init.sigHub = await updateHash(init, hub.privateKey)
         init.sigUser = await updateHash(init, viewer.privateKey)
         await userAuthorizedUpdate(init, viewer, weiDeposit)
-        
+
         await channelManager.startExit(viewer.address)
-        
+
         init.txCount = [2,1]
         init.sigHub = await updateHash(init, hub.privateKey)
         init.sigUser = await updateHash(init, viewer.privateKey)
-        await emptyChannelWithChallenge(init, viewer.address) 
+        await emptyChannelWithChallenge(init, viewer.address)
       })
 
     it("FAIL: channel not in dispute", async() => {
@@ -966,7 +970,7 @@ contract("ChannelManager", accounts => {
         await channelManager.startExit(viewer.address, {from: viewer.address})
         await emptyChannelWithChallenge(init, performer.address).should.be.rejectedWith('challenger must be either user or hub')
     })
-    
+
     it("FAIL: non-zero timeout", async() => {
         init.sigHub = await updateHash(init, hub.privateKey)
         init.sigUser = await updateHash(init, viewer.privateKey)
@@ -983,7 +987,7 @@ contract("ChannelManager", accounts => {
         await channelManager.startExit(viewer.address)
         await emptyChannelWithChallenge(init, viewer.address).should.be.rejectedWith('global txCount must be higher than the current global txCount')
     })
-    
+
     it("FAIL: onchain txCount", async() => {
         const weiDeposit = 1
         init.sigUser = await updateHash(init, viewer.privateKey)
@@ -994,7 +998,7 @@ contract("ChannelManager", accounts => {
         init.sigHub = await updateHash(init, hub.privateKey)
         init.sigUser = await updateHash(init, viewer.privateKey)
         await userAuthorizedUpdate(init, viewer, weiDeposit)
-        
+
         init.txCount = [3,1]
         init.pendingWeiUpdates = [0,0,weiDeposit,0]
         init.sigHub = await updateHash(init, hub.privateKey)
@@ -1064,7 +1068,7 @@ contract("ChannelManager", accounts => {
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('global txCount must be higher than the current global txCount')
           })
-      
+
         it("FAIL: _verifyAuthorizedUpdate: onchain txCount", async() => {
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init)
@@ -1072,54 +1076,54 @@ contract("ChannelManager", accounts => {
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('onchain txCount must be higher or equal to the current onchain txCount')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: wei conservation", async() => {
             init.weiBalances = [1,0]
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('wei must be conserved')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: token conservation", async() => {
             init.tokenBalances = [0,1]
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('tokens must be conserved')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: insufficient reserve wei", async() => {
             init.pendingWeiUpdates = [1,0,0,0]
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('insufficient reserve wei for deposits')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: insufficient reserve token", async() => {
             init.pendingTokenUpdates = [1,0,0,0]
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('insufficient reserve tokens for deposits')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: insufficient wei", async() => {
             init.pendingWeiUpdates = [0,1,0,1]
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('insufficient wei')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: insufficient token", async() => {
             init.pendingTokenUpdates = [0,1,0,1]
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('insufficient token')
         })
-    
+
         it("FAIL: _verifySig: user is hub", async() => {
             init.user = hub.address
             init.sigUser = await updateHash(init, viewer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('user can not be hub')
         })
-    
+
         it("FAIL: _verifySig: user signature invalid", async() => {
             init.sigUser = await updateHash(init, performer.privateKey)
             await hubAuthorizedUpdate(init).should.be.rejectedWith('user signature invalid')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: Channel not open", async() => {
             init.sigUser = await updateHash(init, viewer.privateKey)
             await channelManager.startExit(viewer.address) // channel.status = Status.ChannelDispute
@@ -1127,7 +1131,7 @@ contract("ChannelManager", accounts => {
         })
     })
 
-    describe('userAuthorizedUpdate', () => {    
+    describe('userAuthorizedUpdate', () => {
         it("happy case", async() => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer)
@@ -1147,7 +1151,7 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('VM Exception while processing transaction: revert')
         })
-    
+
         it("FAIL: Wei transfer", async() => {
             init.txCount = [2,1]
             init.pendingWeiUpdates = [0,0,0,1] // should fail
@@ -1155,7 +1159,7 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('VM Exception while processing transaction: revert')
         })
-    
+
         it("FAIL: Token transfer", async() => {
             init.txCount = [2,1]
             init.pendingTokenUpdates = [0,0,0,1] // should fail
@@ -1163,7 +1167,7 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('VM Exception while processing transaction: revert')
         })
-  
+
         it("FAIL: _verifyAuthorizedUpdate: global txCount", async() => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer)
@@ -1171,7 +1175,7 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('global txCount must be higher than the current global txCount')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: onchain txCount", async() => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer)
@@ -1179,52 +1183,52 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('onchain txCount must be higher or equal to the current onchain txCount')
         })
-  
+
         it("FAIL: _verifyAuthorizedUpdate: timeout", async() => {
             init.txCount = [2,1]
             init.timeout = 1
-            
+
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('the timeout must be zero or not have passed')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: wei conservation", async() => {
             init.txCount = [2,1]
             init.weiBalances = [0, 1]
-            
+
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('wei must be conserved')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: token conservation", async() => {
             init.txCount = [2,1]
             init.tokenBalances = [0, 1]
-            
+
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('tokens must be conserved')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: insufficient reserve wei", async() => {
             init.txCount = [2,1]
             init.pendingWeiUpdates = [1,0,0,0]
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('insufficient reserve wei for deposits')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: insufficient reserve token", async() => {
             init.txCount = [2,1]
             init.pendingTokenUpdates = [1,0,0,0]
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('insufficient reserve tokens for deposits')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: insufficient wei", async() => {
             init.txCount = [2,1]
             init.pendingWeiUpdates = [0,1,0,1]
             init.sigHub = await updateHash(init, hub.privateKey)
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('insufficient wei')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: insufficient wei", async() => {
             init.txCount = [2,1]
             init.pendingTokenUpdates = [0,1,0,1]
@@ -1255,18 +1259,18 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             await channelManager.startExit(viewer.address) // channel.status = Status.ChannelDispute
             await userAuthorizedUpdate(init, viewer).should.be.rejectedWith('channel must be open')
-        })    
+        })
     })
 
     describe('hubContractWithdraw', () => {
         it("happy case", async() => {
           await channelManager.hubContractWithdraw(0,0)
         })
-    
+
         it("insufficient wei", async() => {
           await channelManager.hubContractWithdraw(1,0).should.be.rejectedWith('hubContractWithdraw: Contract wei funds not sufficient to withdraw')
         })
-    
+
         it("insufficient token", async() => {
           await channelManager.hubContractWithdraw(0,1).should.be.rejectedWith('hubContractWithdraw: Contract token funds not sufficient to withdraw')
         })
@@ -1296,7 +1300,7 @@ contract("ChannelManager", accounts => {
         it("FAIL : not user or hub", async() => {
           init.sigHub = await updateHash(init, hub.privateKey)
           init.sigUser = await updateHash(init, viewer.privateKey)
-          
+
           await startExitWithUpdate(init, performer.address).should.be.rejectedWith('exit initiator must be user or hub')
         })
 
@@ -1304,7 +1308,7 @@ contract("ChannelManager", accounts => {
           init.timeout = 1
           init.sigHub = await updateHash(init, hub.privateKey)
           init.sigUser = await updateHash(init, viewer.privateKey)
-    
+
           await startExitWithUpdate(init, hub.address).should.be.rejectedWith('can\'t start exit with time-sensitive states')
         })
 
@@ -1312,7 +1316,7 @@ contract("ChannelManager", accounts => {
           init.user = hub.address
           init.sigHub = await updateHash(init, hub.privateKey)
           init.sigUser = await updateHash(init, viewer.privateKey)
-    
+
           await startExitWithUpdate(init, hub.address).should.be.rejectedWith('user can not be hub')
         })
 
@@ -1320,10 +1324,10 @@ contract("ChannelManager", accounts => {
           init.txCount = [0,1]
           init.sigHub = await updateHash(init, hub.privateKey)
           init.sigUser = await updateHash(init, viewer.privateKey)
-    
+
           await startExitWithUpdate(init, hub.address).should.be.rejectedWith('global txCount must be higher than the current global txCount')
         })
-                
+
         it("FAIL: _verifyAuthorizedUpdate: onchain txCount", async() => {
             const weiDeposit = 1
             init.sigUser = await updateHash(init, viewer.privateKey)
@@ -1334,14 +1338,14 @@ contract("ChannelManager", accounts => {
             init.sigHub = await updateHash(init, hub.privateKey)
             init.sigUser = await updateHash(init, viewer.privateKey)
             await userAuthorizedUpdate(init, viewer, weiDeposit)
-            
+
             init.txCount = [3,1]
             init.pendingWeiUpdates = [0,0,weiDeposit,0]
             init.sigHub = await updateHash(init, hub.privateKey)
             init.sigUser = await updateHash(init, viewer.privateKey)
             await startExitWithUpdate(init, hub.address).should.be.rejectedWith('onchain txCount must be higher or equal to the current onchain txCount')
         })
-   
+
         it("FAIL: _verifyAuthorizedUpdate: wei conservation", async() => {
           init.txCount = [2,1]
           init.weiBalances = [0, 1]
@@ -1349,7 +1353,7 @@ contract("ChannelManager", accounts => {
           init.sigUser = await updateHash(init, viewer.privateKey)
           await startExitWithUpdate(init, viewer.address).should.be.rejectedWith('wei must be conserved')
         })
-    
+
         it("FAIL: _verifyAuthorizedUpdate: token conservation", async() => {
           init.txCount = [2,1]
           init.tokenBalances = [0, 1]
@@ -1357,8 +1361,8 @@ contract("ChannelManager", accounts => {
           init.sigUser = await updateHash(init, viewer.privateKey)
           await startExitWithUpdate(init, hub.address).should.be.rejectedWith('tokens must be conserved')
         })
-    
-    
+
+
         it("FAIL: channel not open", async() => {
           init.sigHub = await updateHash(init, hub.privateKey)
           init.sigUser = await updateHash(init, viewer.privateKey)
@@ -1373,11 +1377,11 @@ contract("ChannelManager", accounts => {
             await moveForwardSecs(config.timeout + 1)
             await channelManager.emptyChannel(hub.address)
           })
-          
+
         it("FAIL : channel not in dispute", async() => {
           await channelManager.emptyChannel(hub.address).should.be.rejectedWith('channel must be in dispute')
         })
-    
+
         it("FAIL : channel closing time not passed", async() => {
           await channelManager.startExit(hub.address)
           await channelManager.emptyChannel(hub.address).should.be.rejectedWith('channel closing time must have passed')

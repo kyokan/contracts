@@ -1,6 +1,6 @@
 const EC = artifacts.require("./ECTools.sol");
 const LC = artifacts.require("./ChannelManager.sol");
-const StandardToken = artifacts.require("./StandardToken.sol");
+const HumanStandardToken = artifacts.require("./HumanStandardToken.sol");
 const config = require("../config.json")
 
 module.exports = async function(deployer, network, accounts) {
@@ -11,14 +11,14 @@ module.exports = async function(deployer, network, accounts) {
   if (network !== "mainnet" && network !== "rinkeby") {
     const supply = web3.utils.toBN(web3.utils.toWei("696969", "ether"));
     await deployer.deploy(
-      StandardToken,
+      HumanStandardToken,
       supply,
       config.token.name,
       config.token.decimals,
       config.token.ticker
     );
-    const standardToken = await StandardToken.deployed();
-    tokenAddress = standardToken.address;
+    const token = await HumanStandardToken.deployed();
+    tokenAddress = token.address;
   }
 
   await deployer.link(EC, LC);
