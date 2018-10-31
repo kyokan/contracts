@@ -695,7 +695,7 @@ contract ChannelManager {
         // if user is receiver, send them receiver wei balance
         if (user == receiver) {
             user.transfer(weiBalances[1]);
-        // if user is sender, send them remainining sender wei balance
+        // if user is sender, send them remaining sender wei balance
         } else if (user == sender) {
             user.transfer(weiBalances[0]);
         }
@@ -708,7 +708,7 @@ contract ChannelManager {
         // if user is receiver, send them receiver token balance
         if (user == receiver) {
             require(approvedToken.transfer(user, tokenBalances[1]), "user [receiver] token withdrawal transfer failed");
-        // if user is sender, send them remainining sender token balance
+        // if user is sender, send them remaining sender token balance
         } else if (user == sender) {
             require(approvedToken.transfer(user, tokenBalances[0]), "user [sender] token withdrawal transfer failed");
         }
@@ -762,7 +762,7 @@ contract ChannelManager {
         // if user is receiver, send them receiver wei balance
         if (user == receiver) {
             user.transfer(thread.weiBalances[1]);
-        // if user is sender, send them remainining sender wei balance
+        // if user is sender, send them remaining sender wei balance
         } else if (user == sender) {
             user.transfer(thread.weiBalances[0]);
         }
@@ -775,7 +775,7 @@ contract ChannelManager {
         // if user is receiver, send them receiver token balance
         if (user == receiver) {
             require(approvedToken.transfer(user, thread.tokenBalances[1]), "user [receiver] token withdrawal transfer failed");
-        // if user is sender, send them remainining sender token balance
+        // if user is sender, send them remaining sender token balance
         } else if (user == sender) {
             require(approvedToken.transfer(user, thread.tokenBalances[0]), "user [sender] token withdrawal transfer failed");
         }
