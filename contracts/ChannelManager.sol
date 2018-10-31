@@ -313,7 +313,7 @@ contract ChannelManager {
     // start exit with onchain state
     function startExit(
         address user
-    ) public noReentrancy {
+    ) public {
         Channel storage channel = channels[user];
         require(channel.status == Status.Open, "channel must be open");
 
@@ -347,7 +347,7 @@ contract ChannelManager {
         uint256 timeout,
         string sigHub,
         string sigUser
-    ) public noReentrancy {
+    ) public {
         Channel storage channel = channels[user[0]];
         require(channel.status == Status.Open, "channel must be open");
 
@@ -567,7 +567,7 @@ contract ChannelManager {
         uint256 txCount,
         bytes proof,
         string sig
-    ) public noReentrancy {
+    ) public {
         Channel storage channel = channels[user];
         require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
@@ -608,7 +608,7 @@ contract ChannelManager {
         uint256[2] updatedTokenBalances, // [sender, receiver]
         uint256 updatedTxCount,
         string updateSig
-    ) public noReentrancy {
+    ) public {
         Channel storage channel = channels[user];
         require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
