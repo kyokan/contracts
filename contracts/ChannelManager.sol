@@ -1013,11 +1013,11 @@ contract ChannelManager {
         );
 
         if (checks[0]) {
-            require(ECTools.isSignedBy(state, sigHub, hub), "hub signature invalid")
+            require(ECTools.isSignedBy(state, sigHub, hub), "hub signature invalid");
         }
 
         if (checks[1]) {
-            require(ECTools.isSignedBy(state, sigUser, user[0]), "user signature invalid")
+            require(ECTools.isSignedBy(state, sigUser, user[0]), "user signature invalid");
         }
     }
 
@@ -1045,8 +1045,8 @@ contract ChannelManager {
                 txCount // persisted onchain even when empty
             )
         );
-        require(ECTools.isSignedBy(state, sig, sender), "signature invalid")
-        
+        require(ECTools.isSignedBy(state, sig, sender), "signature invalid");
+
         if (threadRoot != bytes32(0x0)) {
             require(_isContained(state, proof, threadRoot) == true, "initial thread state is not contained in threadRoot");
         }
