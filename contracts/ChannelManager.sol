@@ -1013,11 +1013,11 @@ contract ChannelManager {
         );
 
         if (checks[0]) {
-            require(ECTools.isSignedBy(state, sigHub, hub), "hub signature invalid");
+            require(hub == ECTools.recoverSigner(state, sigHub), "hub signature invalid");
         }
 
         if (checks[1]) {
-            require(ECTools.isSignedBy(state, sigUser, user[0]), "user signature invalid");
+            require(user[0] == ECTools.recoverSigner(state, sigUser), "user signature invalid");
         }
     }
 
