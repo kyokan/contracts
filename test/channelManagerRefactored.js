@@ -216,7 +216,7 @@ async function emptyThread(data) {
     )
 }
 
-async function fastEmptyThread(data) {
+async function fastEmptyThread(data, user) {
     await channelManager.fastEmptyThread(
         data.user,
         data.sender,
@@ -224,7 +224,8 @@ async function fastEmptyThread(data) {
         data.weiBalances,
         data.tokenBalances,
         data.txCount,
-        data.sig
+        data.sig,
+        {from:user}
     )
 }
 
@@ -287,6 +288,53 @@ contract("ChannelManager", accounts => {
     })
     afterEach(async () => {
         await restore(snapshotId)
+    })
+
+    describe('fastEmptyThread', () => {
+        it.skip("happy case", async() => {
+            tokenAddress.approve(channelManager.address, 100, {from: hub.address})
+            tokenAddress.transfer(channelManager.address, 100, {from: hub.address})
+            const weiDeposit = 100
+            init.receiver = hub.address
+            init.recipient = hub.address
+            init.pendingWeiUpdates = [weiDeposit,0,weiDeposit,0]
+            init.pendingTokenUpdates = [100,0,0,0]
+            init.threadCount = 1
+            init.proof = await generateThreadRootHash({
+                "contractAddress" : channelManager.address,
+                "user" : viewer.address,
+                "sender" : viewer.address,
+                "receiver" : hub.address,
+                "balanceWeiSender" : 100,
+                "balanceWeiReceiver" : 0,
+                "balanceTokenSender" : 100,
+                "balanceTokenReceiver" : 0,
+                "txCount" : 2
+            })
+            init.sigHub = await updateHash(init, hub.privateKey)
+            init.sigUser = await updateHash(init, viewer.privateKey)
+            
+            await userAuthorizedUpdate(init, viewer, weiDeposit)
+            await channelManager.startExit(viewer.address)
+            await moveForwardSecs(config.timeout + 1)
+            // channel must be in thread dispute phase
+            console.log('viewer wei channel before empty channel', await channelManager.getWeiBalances(viewer.address))
+            // console.log('viewer wei channel after emptyChannel', await 
+            channelManager.getWeiBalances(viewer.address))
+            
+            init.txCount = 2
+            init.weiBalances = [100,0]
+            init.tokenBalances = [100,0]
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await startExitThread(init, hub.address)
+                    
+            init.txCount = 3
+            // TODO : increase tokens
+            init.weiBalances = [90,10]
+            init.tokenBalances = [90,10]
+            init.sig = await updateThreadHash(init, viewer.privateKey)
+            await fastEmptyThread(init, hub.address)
+        })
     })
 
     describe('startExitThreadWithUpdate', () => {
