@@ -842,6 +842,8 @@ contract ChannelManager {
         );
     }
 
+    function() external payable {}
+
     // ******************
     // INTERNAL FUNCTIONS
     // ******************
