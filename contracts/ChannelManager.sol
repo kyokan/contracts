@@ -1043,6 +1043,8 @@ contract ChannelManager {
         bytes32 threadRoot
     ) internal view {
         require(sender != receiver, "sender can not be receiver");
+        require(user == sender || user == receiver, "user must be sender or receiver");
+        require(sender != hub && receiver != hub, "hub can not be sender or receiver");
 
         bytes32 state = keccak256(
             abi.encodePacked(
