@@ -1052,8 +1052,8 @@ contract ChannelManager {
                 user,
                 sender,
                 receiver,
-                weiBalances, // [hub, user]
-                tokenBalances, // [hub, user]
+                weiBalances, // [sender, receiver]
+                tokenBalances, // [sender, receiver]
                 txCount // persisted onchain even when empty
             )
         );
