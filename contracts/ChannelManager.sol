@@ -628,8 +628,11 @@ contract ChannelManager {
         require(updatedWeiBalances[0].add(updatedWeiBalances[1]) == weiBalances[0].add(weiBalances[1]), "updated wei balances must match sum of initial wei balances");
         require(updatedTokenBalances[0].add(updatedTokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
-        require(updatedWeiBalances[1] > weiBalances[1], "receiver wei balance must always increase");
-        require(updatedTokenBalances[1] > tokenBalances[1], "receiver token balance must always increase");
+        require(
+          updatedWeiBalances[1] >  weiBalances[1] && updatedTokenBalances[1] >= tokenBalances[1] ||
+          updatedWeiBalances[1] >= weiBalances[1] && updatedTokenBalances[1] >  tokenBalances[1],
+          "receiver balances may never decrease and either wei or token balance must strictly increase"
+        );
 
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
         _verifyThread(user, threadMembers[0], threadMembers[1], updatedWeiBalances, updatedTokenBalances, updatedTxCount, "", updateSig, bytes32(0x0));
@@ -673,8 +676,11 @@ contract ChannelManager {
         require(weiBalances[0].add(weiBalances[1]) == thread.weiBalances[0].add(thread.weiBalances[1]), "updated wei balances must match sum of thread wei balances");
         require(tokenBalances[0].add(tokenBalances[1]) == thread.tokenBalances[0].add(thread.tokenBalances[1]), "updated token balances must match sum of thread token balances");
 
-        require(weiBalances[1] > thread.weiBalances[1], "receiver wei balance must always increase");
-        require(tokenBalances[1] > thread.tokenBalances[1], "receiver token balance must always increase");
+        require(
+          weiBalances[1] >  thread.weiBalances[1] && tokenBalances[1] >= thread.tokenBalances[1] ||
+          weiBalances[1] >= thread.weiBalances[1] && tokenBalances[1] >  thread.tokenBalances[1],
+          "receiver balances may never decrease and either wei or token balance must strictly increase"
+        );
 
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
         _verifyThread(user, sender, receiver, weiBalances, tokenBalances, txCount, "", sig, bytes32(0x0));
