@@ -1060,7 +1060,7 @@ contract ChannelManager {
         require(sender == ECTools.recoverSigner(state, sig));
 
         if (threadRoot != bytes32(0x0)) {
-            require(_isContained(state, proof, threadRoot) == true, "initial thread state is not contained in threadRoot");
+            require(_isContained(state, proof, threadRoot), "initial thread state is not contained in threadRoot");
         }
     }
 
