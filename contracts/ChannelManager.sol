@@ -508,14 +508,18 @@ contract ChannelManager {
         );
     }
 
-    // after timer expires - anyone can call
+    // after timer expires - anyone can call; even before timer expires, non-exit-initiating party can call
     function emptyChannel(
         address user
     ) public noReentrancy {
         Channel storage channel = channels[user];
         require(channel.status == Status.ChannelDispute, "channel must be in dispute");
 
-        require(channel.channelClosingTime < now, "channel closing time must have passed");
+        require(
+          channel.channelClosingTime < now ||
+          msg.sender != channel.exitInitiator && (msg.sender == hub || msg.sender == user),
+          "channel closing time must have passed or msg.sender must be non-exit-initiating party"
+        );
 
         // deduct hub/user wei/tokens from total channel balances
         channel.weiBalances[2] = channel.weiBalances[2].sub(channel.weiBalances[0]).sub(channel.weiBalances[1]);
