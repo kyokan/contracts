@@ -1,5 +1,21 @@
 (Fully updated 10/24/2018)
 
+# Running the test suite
+
+Use the scripts in the package.json to ensure the proper test environment:
+```
+# Node and npm versions:
+# node >= v10
+# npm >= v6
+
+# install the dev dependencies
+# run ganache in the background (or separate shell) ensuring the proper mnemonic
+# run the primary test suite using truffle network=ganache settings
+
+$ npm i
+$ npm run ganache &
+$ npm test
+```
 # DOCUMENT FOR CONTRACT SPEC
 
 Canonical links: [https://paper.dropbox.com/doc/SpankPay-BOOTY-Drop-2-CANONICAL-URLs--AP7jZj1zm4J7XSVcw0Ifk_fBAg-Qpw2NAWgCIdg0Z5G9lpSu](https://paper.dropbox.com/doc/SpankPay-BOOTY-Drop-2-CANONICAL-URLs--AP7jZj1zm4J7XSVcw0Ifk_fBAg-Qpw2NAWgCIdg0Z5G9lpSu)
