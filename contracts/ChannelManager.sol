@@ -573,14 +573,6 @@ contract ChannelManager {
     // THREAD DISPUTE METHODS
     // **********************
 
-    // still need to prove that the thread is part of the threadRoot of the channel
-    // - need the initial state -> verify inclusion
-    //   - but we should have provided this when we started the exit process
-    //   - should be saving the initial values?
-    //     - increases gas for first exit, reduces it for 2nd exit
-    // - then still need to do the verify
-
-
     function exitSettledThread(
         address user,
         address sender,
@@ -588,7 +580,6 @@ contract ChannelManager {
         uint256 threadId,
         uint256[2] weiBalances, // [sender, receiver] -> initial balances
         uint256[2] tokenBalances, // [sender, receiver] -> initial balances
-        uint256 txCount, // TODO -> should just be 0
         bytes proof,
         string sig,
     ) public noReentrancy {
@@ -604,19 +595,15 @@ contract ChannelManager {
         require(thread.status == ThreadStatus.Settled, "thread must be settled");
 
         // verify initial thread state
-        _verifyThread(sender, receiver, threadId, weiBalances, tokenBalances, txCount, proof, sig, channel.threadRoot);
+        _verifyThread(sender, receiver, threadId, weiBalances, tokenBalances, 0, proof, sig, channel.threadRoot);
 
         require(thread.weiBalances[0].add(thread.weiBalances[1]) == weiBalances[0].add(weiBalances[1]), "updated wei balances must match sum of initial wei balances");
         require(thread.tokenBalances[0].add(thread.tokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
-        require(
-          thread.weiBalances[1] >  weiBalances[1] && thread.tokenBalances[1] >= tokenBalances[1] ||
-          thread.weiBalances[1] >= weiBalances[1] && thread.tokenBalances[1] >  tokenBalances[1],
-          "receiver balances may never decrease and either wei or token balance must strictly increase"
-        );
+        require(thread.weiBalances[1] >= weiBalances[1] && thread.tokenBalances[1] >= tokenBalances[1], "receiver balances may never decrease");
 
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
-        _verifyThread(sender, receiver, threadId, updatedWeiBalances, updatedTokenBalances, updatedTxCount, "", updateSig, bytes32(0x0));
+        _verifyThread(sender, receiver, threadId, thread.weiBalances, thread.tokenBalances, updatedTxCount, "", updateSig, bytes32(0x0));
 
         // deduct sender/receiver wei/tokens about to be emptied from the thread from the total channel balances
         channel.weiBalances[2] = channel.weiBalances[2].sub(thread.weiBalances[0]).sub(thread.weiBalances[1]);
@@ -676,7 +663,6 @@ contract ChannelManager {
         uint256 threadId,
         uint256[2] weiBalances, // [sender, receiver]
         uint256[2] tokenBalances, // [sender, receiver]
-        uint256 txCount,
         bytes proof,
         string sig
     ) public noReentrancy {
@@ -690,14 +676,10 @@ contract ChannelManager {
 
         require(thread.status == ThreadStatus.Open, "thread must be open");
 
-        // TODO - thread should not have a txcount when it is first disputed (no longer picking up from where we left off)
-        require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
-
-        _verifyThread(sender, receiver, threadId, weiBalances, tokenBalances, txCount, proof, sig, channel.threadRoot);
+        _verifyThread(sender, receiver, threadId, weiBalances, tokenBalances, 0, proof, sig, channel.threadRoot);
 
         thread.weiBalances = weiBalances;
         thread.tokenBalances = tokenBalances;
-        thread.txCount = txCount;
         thread.status = ThreadStatus.Exiting;
 
         emit DidStartExitThread(
@@ -719,7 +701,6 @@ contract ChannelManager {
         uint256 threadId,
         uint256[2] weiBalances, // [sender, receiver]
         uint256[2] tokenBalances, // [sender, receiver]
-        uint256 txCount,
         bytes proof,
         string sig,
         uint256[2] updatedWeiBalances, // [sender, receiver]
@@ -735,15 +716,14 @@ contract ChannelManager {
 
         Thread storage thread = threads[threadMembers[0]][threadMembers[1]][threadId];
         require(thread.status == ThreadStatus.Open, "thread must be open");
-        require(txCount > thread.txCount, "thread txCount must be higher than the current thread txCount");
 
-        _verifyThread(threadMembers[0], threadMembers[1], threadId, weiBalances, tokenBalances, txCount, proof, sig, channel.threadRoot);
+        _verifyThread(threadMembers[0], threadMembers[1], threadId, weiBalances, tokenBalances, 0, proof, sig, channel.threadRoot);
 
         // *********************
         // PROCESS THREAD UPDATE
         // *********************
 
-        require(updatedTxCount > txCount, "updated thread txCount must be higher than the initial thread txCount");
+        require(updatedTxCount > 0, "updated thread txCount must be higher than 0");
         require(updatedWeiBalances[0].add(updatedWeiBalances[1]) == weiBalances[0].add(weiBalances[1]), "updated wei balances must match sum of initial wei balances");
         require(updatedTokenBalances[0].add(updatedTokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
