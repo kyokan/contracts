@@ -756,8 +756,8 @@ contract ChannelManager {
         address sender,
         address receiver,
         uint256 threadId,
-        uint256[2] weiBalances,
-        uint256[2] tokenBalances,
+        uint256[2] weiBalances, // updated weiBalances
+        uint256[2] tokenBalances, // updated tokenBalances
         uint256 txCount,
         string sig
     ) public noReentrancy {
