@@ -1,4 +1,4 @@
-pragma solidity ^0.4.24;
+pragma solidity ^0.4.25;
 pragma experimental ABIEncoderV2;
 
 import "./lib/ECTools.sol";
@@ -313,7 +313,7 @@ contract ChannelManager {
     // start exit with onchain state
     function startExit(
         address user
-    ) public noReentrancy {
+    ) public {
         Channel storage channel = channels[user];
         require(channel.status == Status.Open, "channel must be open");
 
@@ -347,7 +347,7 @@ contract ChannelManager {
         uint256 timeout,
         string sigHub,
         string sigUser
-    ) public noReentrancy {
+    ) public {
         Channel storage channel = channels[user[0]];
         require(channel.status == Status.Open, "channel must be open");
 
@@ -567,7 +567,7 @@ contract ChannelManager {
         uint256 txCount,
         bytes proof,
         string sig
-    ) public noReentrancy {
+    ) public {
         Channel storage channel = channels[user];
         require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
@@ -608,7 +608,7 @@ contract ChannelManager {
         uint256[2] updatedTokenBalances, // [sender, receiver]
         uint256 updatedTxCount,
         string updateSig
-    ) public noReentrancy {
+    ) public {
         Channel storage channel = channels[user];
         require(channel.status == Status.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
@@ -679,10 +679,6 @@ contract ChannelManager {
         // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
         _verifyThread(user, sender, receiver, weiBalances, tokenBalances, txCount, "", sig, bytes32(0x0));
 
-        //Unidirectional thread
-        require(weiBalances[1] > thread.weiBalances[1], "receiver wei balance must always increase");
-        require(tokenBalances[1] > thread.tokenBalances[1], "receiver token balance must always increase");
-
         // deduct sender/receiver wei/tokens about to be emptied from the thread from the total channel balances
         channel.weiBalances[2] = channel.weiBalances[2].sub(weiBalances[0]).sub(weiBalances[1]);
         channel.tokenBalances[2] = channel.tokenBalances[2].sub(tokenBalances[0]).sub(tokenBalances[1]);
@@ -695,7 +691,7 @@ contract ChannelManager {
         // if user is receiver, send them receiver wei balance
         if (user == receiver) {
             user.transfer(weiBalances[1]);
-        // if user is sender, send them remainining sender wei balance
+        // if user is sender, send them remaining sender wei balance
         } else if (user == sender) {
             user.transfer(weiBalances[0]);
         }
@@ -708,7 +704,7 @@ contract ChannelManager {
         // if user is receiver, send them receiver token balance
         if (user == receiver) {
             require(approvedToken.transfer(user, tokenBalances[1]), "user [receiver] token withdrawal transfer failed");
-        // if user is sender, send them remainining sender token balance
+        // if user is sender, send them remaining sender token balance
         } else if (user == sender) {
             require(approvedToken.transfer(user, tokenBalances[0]), "user [sender] token withdrawal transfer failed");
         }
@@ -762,7 +758,7 @@ contract ChannelManager {
         // if user is receiver, send them receiver wei balance
         if (user == receiver) {
             user.transfer(thread.weiBalances[1]);
-        // if user is sender, send them remainining sender wei balance
+        // if user is sender, send them remaining sender wei balance
         } else if (user == sender) {
             user.transfer(thread.weiBalances[0]);
         }
@@ -775,7 +771,7 @@ contract ChannelManager {
         // if user is receiver, send them receiver token balance
         if (user == receiver) {
             require(approvedToken.transfer(user, thread.tokenBalances[1]), "user [receiver] token withdrawal transfer failed");
-        // if user is sender, send them remainining sender token balance
+        // if user is sender, send them remaining sender token balance
         } else if (user == sender) {
             require(approvedToken.transfer(user, thread.tokenBalances[0]), "user [sender] token withdrawal transfer failed");
         }
@@ -845,6 +841,8 @@ contract ChannelManager {
             channel.threadCount
         );
     }
+
+    function() external payable {}
 
     // ******************
     // INTERNAL FUNCTIONS
@@ -1049,7 +1047,7 @@ contract ChannelManager {
                 txCount // persisted onchain even when empty
             )
         );
-        require(sender == ECTools.recoverSigner(state, sig));
+        require(ECTools.isSignedBy(state, sig, sender), "signature invalid");
 
         if (threadRoot != bytes32(0x0)) {
             require(_isContained(state, proof, threadRoot) == true, "initial thread state is not contained in threadRoot");
