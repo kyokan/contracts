@@ -131,7 +131,7 @@ contract ChannelManager {
     }
 
     mapping(address => Channel) public channels;
-    mapping(address => mapping(address => mapping(uint256 => Thread)) threads; // threads[sender][receiver][threadId]
+    mapping(address => mapping(address => mapping(uint256 => Thread))) threads; // threads[sender][receiver][threadId]
 
     bool locked;
 
@@ -581,7 +581,7 @@ contract ChannelManager {
         uint256[2] weiBalances, // [sender, receiver] -> initial balances
         uint256[2] tokenBalances, // [sender, receiver] -> initial balances
         bytes proof,
-        string sig,
+        string sig
     ) public noReentrancy {
         Channel storage channel = channels[user];
         require(channel.status == ChannelStatus.ThreadDispute, "channel must be in thread dispute phase");
@@ -601,9 +601,6 @@ contract ChannelManager {
         require(thread.tokenBalances[0].add(thread.tokenBalances[1]) == tokenBalances[0].add(tokenBalances[1]), "updated token balances must match sum of initial token balances");
 
         require(thread.weiBalances[1] >= weiBalances[1] && thread.tokenBalances[1] >= tokenBalances[1], "receiver balances may never decrease");
-
-        // Note: explicitly set threadRoot == 0x0 because then it doesn't get checked by _isContained (updated state is not part of root)
-        _verifyThread(sender, receiver, threadId, thread.weiBalances, thread.tokenBalances, updatedTxCount, "", updateSig, bytes32(0x0));
 
         // deduct sender/receiver wei/tokens about to be emptied from the thread from the total channel balances
         channel.weiBalances[2] = channel.weiBalances[2].sub(thread.weiBalances[0]).sub(thread.weiBalances[1]);
@@ -686,8 +683,8 @@ contract ChannelManager {
             user,
             sender,
             receiver,
-            msg.sender,
             threadId,
+            msg.sender,
             thread.weiBalances,
             thread.tokenBalances,
             thread.txCount
@@ -712,7 +709,7 @@ contract ChannelManager {
         require(channel.status == ChannelStatus.ThreadDispute, "channel must be in thread dispute phase");
         require(now < channel.threadClosingTime, "channel thread closing time must not have passed");
         require(msg.sender == hub || msg.sender == user, "thread exit initiator must be user or hub");
-        require(user == sender || user == receiver, "user must be thread sender or receiver");
+        require(user == threadMembers[0] || user == threadMembers[1], "user must be thread sender or receiver");
 
         Thread storage thread = threads[threadMembers[0]][threadMembers[1]][threadId];
         require(thread.status == ThreadStatus.Open, "thread must be open");
@@ -845,7 +842,8 @@ contract ChannelManager {
     function emptyThread(
         address user,
         address sender,
-        address receiver
+        address receiver,
+        uint256 threadId
     ) public noReentrancy {
         Channel storage channel = channels[user];
         require(channel.status == ChannelStatus.ThreadDispute, "channel must be in thread dispute");
@@ -1137,7 +1135,6 @@ contract ChannelManager {
         bytes32 threadRoot
     ) internal view {
         require(sender != receiver, "sender can not be receiver");
-        require(user == sender || user == receiver, "user must be sender or receiver");
         require(sender != hub && receiver != hub, "hub can not be sender or receiver");
 
         bytes32 state = keccak256(
