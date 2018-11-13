@@ -17,7 +17,7 @@ module.exports = async function(deployer, network, accounts) {
       "TST"
     );
     const hst = await HumanStandardToken.deployed();
-    tokenAddress = standardToken.address;
+    tokenAddress = hst.address;
   }
 
   await deployer.link(EC, LC);
